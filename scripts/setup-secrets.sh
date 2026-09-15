@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler secret put 到 Cloudflare（全量 18 项）。
+# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler secret put 到 Cloudflare（全量 17 项）。
 # 用法： bash scripts/setup-secrets.sh [本机 .env 路径]
 # 前置：npm install && npx wrangler login（已在本机登录 Cloudflare）
 set -euo pipefail
@@ -49,8 +49,6 @@ put MT_CLIENT_ID "$(get MT_CLIENT_ID)"
 put MT_AISCENE "$(get MT_AISCENE)"
 # ---- 通知（server酱 PUSH_KEY_MY）----
 put NOTIFY_PUSH_KEY "$(get PUSH_KEY_MY)"
-# ---- 手动触发保护（可选）----
-put API_KEY "$(get API_KEY)"
 
 echo ""
-echo "完成。未设置 API_KEY 时任何 GET /?key= 都可触发，请注意暴露风险。"
+echo "完成。"

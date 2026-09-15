@@ -30,6 +30,3 @@ MT_AISCENE=
 
 # ---- 通知（server酱 PUSH_KEY_MY 的值）----
 NOTIFY_PUSH_KEY=
-
-# ---- 手动触发保护（fetch ?key= 必须匹配；留空则任意请求都可触发）----
-API_KEY=

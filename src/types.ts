@@ -22,9 +22,8 @@ export interface Env {
   MT_TOKEN: string;
   MT_CLIENT_ID?: string;
   MT_AISCENE?: string;
-  // 通知 / 手动触发
+  // 通知
   NOTIFY_PUSH_KEY?: string;
-  API_KEY?: string;
   // KV（wrangler.toml 绑定）
   CHECKIN_STATE: KVNamespace;
 }

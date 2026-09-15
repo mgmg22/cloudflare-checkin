@@ -43,7 +43,7 @@ cloudflare-checkin/
 │  ├─ tasks/              # workbuddy / trae / minimax / meituan 四个任务
 │  └─ lib/                # http / crypto / md5 / notify 公共库
 └─ scripts/
-   ├─ setup-secrets.sh    # 从本机 .env 批量推送敏感项到 Cloudflare Secret（仅 Secrets，9 项）
+   ├─ setup-secrets.sh    # 从本机 .env 批量推送到 Cloudflare Secret（17 项）
    └─ test-crypto.ts      # MD5 / ECDSA 加密单测
 ```
 
@@ -58,7 +58,6 @@ cloudflare-checkin/
 - MiniMax：`MINIMAX_TOKEN` / `MINIMAX_USER_ID` / `MINIMAX_UUID`（可选）/ `MINIMAX_DEVICE_ID`（可选）
 - 美团：`MT_TOKEN` / `MT_CLIENT_ID`（可选）/ `MT_AISCENE`（可选）
 - 通知：`NOTIFY_PUSH_KEY`（server酱，对应本机 `.env` 的 `PUSH_KEY_MY`）
-- 手动触发保护（可选）：`API_KEY`
 
 > `TRAE_APP_VERSION` 内置默认 `1.107.1`，无需配置。
 
@@ -107,14 +106,6 @@ npx wrangler deploy
 部署后可在 Cloudflare 控制台「Workers & Pages → 你的 Worker → Settings → Triggers」看到两条 Cron；
 失败排查看控制台「Cron Events」（近 100 次调用）/ Workers Logs
 （Cron 失败会被平台自动重试，但无内置告警）。
-
-## 手动触发
-
-```
-GET /?key=<API_KEY>            # 跑聚合三项
-GET /?key=<API_KEY>&only=meituan   # 只跑美团（对齐美团专用 cron）
-```
-未设置 `API_KEY` 时任意 `GET /?key=` 都可触发，请注意暴露风险。
 
 ## 实现要点
 

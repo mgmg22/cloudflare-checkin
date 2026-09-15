@@ -93,34 +93,4 @@ export default {
     const onlyMeituan = event.cron === MEITUAN_CRON;
     await runAll(env, onlyMeituan);
   },
-
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-
-    // 手动触发：GET /?key=API_KEY（可选 &only=meituan 只跑美团，对齐美团专用 cron）
-    if (url.pathname === "/" && url.searchParams.has("key")) {
-      const key = url.searchParams.get("key") || "";
-      if (env.API_KEY && key !== env.API_KEY) {
-        return new Response("403 Forbidden", { status: 403 });
-      }
-      const onlyMeituan = (url.searchParams.get("only") || "") === "meituan";
-      const summary = await runAll(env, onlyMeituan);
-      return new Response(summary, {
-        status: 200,
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
-    }
-
-    // 状态页
-    const status =
-      `qinglong-checkin Worker\n\n` +
-      `Cron 触发（时间均为北京 UTC+8）：\n` +
-      `- 00:08 CST  聚合签到：WorkBuddy / Trae Work / MiniMax Code\n` +
-      `- 10:55 CST  美团每日领券\n\n` +
-      `手动触发：GET /?key=<API_KEY>（可选 &only=meituan 只跑美团）`;
-    return new Response(status, {
-      status: 200,
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
-  },
 };
