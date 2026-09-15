@@ -1,0 +1,34 @@
+# 本地开发用（wrangler dev 会读取 .dev.vars）。部署到生产请用 `wrangler secret put`。
+# 复制本文件为 .dev.vars 并填入真实值（不要提交 .dev.vars）。
+# 变量名与 E:/QinglongMy/.env 中的一致，可直接用 scripts/setup-secrets.sh 从本机 .env 导入。
+
+# ---- WorkBuddy ----
+WB_ACCESS_TOKEN=
+WB_USER_ID=
+
+# ---- Trae Work（TRAE_DEVICE_KEY_PEM / TRAE_DEVICE_PUB_PEM 为 base64 单行，同 .env）----
+TRAE_TOKEN=
+TRAE_DEVICE_ID=
+TRAE_USER_ID=
+TRAE_REFRESH_TOKEN=
+TRAE_DEVICE_KEY_PEM=
+TRAE_DEVICE_PUB_PEM=
+TRAE_MACHINE_ID=
+TRAE_APP_VERSION=1.107.1
+
+# ---- MiniMax Code ----
+MINIMAX_TOKEN=
+MINIMAX_USER_ID=
+MINIMAX_UUID=
+MINIMAX_DEVICE_ID=
+
+# ---- 美团 ----
+MT_TOKEN=
+MT_CLIENT_ID=
+MT_AISCENE=
+
+# ---- 通知（server酱 PUSH_KEY_MY 的值）----
+NOTIFY_PUSH_KEY=
+
+# ---- 手动触发保护（fetch ?key= 必须匹配；留空则任意请求都可触发）----
+API_KEY=
