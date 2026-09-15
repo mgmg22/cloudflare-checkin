@@ -2,49 +2,22 @@ name = "qinglong-checkin"
 main = "src/index.ts"
 compatibility_date = "2024-11-01"
 
-# 两条 cron，时间对齐 py 版（北京 UTC+8）：
-#   "8 16 * * *"  = 00:08 CST → 聚合签到（WorkBuddy / Trae Work / MiniMax Code），对齐 checkin_all.py
-#   "55 2 * * *"  = 10:55 CST → 美团每日领券，对齐 meituan_checkin.py
-# Worker 内用 event.cron 区分：命中美团 cron 只跑美团，否则跑聚合三项。
+# UTC 时间：00:08 CST 聚合签到（WorkBuddy/Trae/MiniMax），10:55 仅美团
 [triggers]
 crons = ["8 16 * * *", "55 2 * * *"]
 
 [[kv_namespaces]]
 binding = "CHECKIN_STATE"
-id = "REPLACE_WITH_YOUR_KV_ID"
+id = "REPLACE_WITH_YOUR_KV_ID" # TODO：换成真实 KV id
 
-# 说明：
-# - 免费版 Worker：单次 10ms CPU、50 子请求/次、账号 5 个 cron、KV 已含。
-#   签到流程只是几次顺序 HTTPS 调用 + 一次 WebCrypto 签名（网络等待不算 CPU），
-#   实测通常在 10ms CPU 内；若偶发超 CPU，升级 Paid $5/月（cron CPU 上限 15 分钟）。
-# - Cron 失败的 scheduled 调用会被平台自动重试（handler 可调 controller.noRetry() 关闭）；
-#   无内置失败告警，失败记录见控制台「Cron Events」（近 100 次）/ Workers Logs 或通知文案。
-
-# ── 非敏感配置：明文 Variables，随仓库提交 ──────────────────────────────
-# 部署后可在 Cloudflare 控制台「Workers → Settings → Variables」直接改。
-# 真正敏感的 token / 私钥走 Cloudflare Secret（见下方注释 + README），
-# 用 `wrangler secret put` 或控制台「Secrets」录入，不进仓库。
-# 两种绑定运行时都通过 env.X 读取，tasks 代码无需区分。
+# 明文配置；敏感项走 wrangler secret put，清单见 README
 [vars]
-# WorkBuddy
 WB_USER_ID = ""
-# Trae Work
 TRAE_DEVICE_ID = ""
 TRAE_USER_ID = ""
 TRAE_MACHINE_ID = ""
-# MiniMax Code
 MINIMAX_USER_ID = ""
 MINIMAX_UUID = ""
 MINIMAX_DEVICE_ID = ""
-# 美团
 MT_CLIENT_ID = ""
 MT_AISCENE = ""
-# 注：TRAE_APP_VERSION 不在此列——trae.ts 内置默认 "1.107.1"，仅需在偏离默认时
-# 用 env.TRAE_APP_VERSION 覆盖（可选，不占变量槽位）。
-
-# ── 敏感配置：Cloudflare Secret（加密，不进仓库）────────────────────────
-# 用 `bash scripts/setup-secrets.sh` 或逐个：
-#   printf '%s' '<值>' | npx wrangler secret put WB_ACCESS_TOKEN
-#   ...（其余见 README「环境变量 / Secrets」清单）
-# WB_ACCESS_TOKEN / TRAE_TOKEN / TRAE_REFRESH_TOKEN / TRAE_DEVICE_KEY_PEM /
-# TRAE_DEVICE_PUB_PEM / MINIMAX_TOKEN / MT_TOKEN / NOTIFY_PUSH_KEY / API_KEY
