@@ -1,0 +1,47 @@
+#!/usr/bin/env node
+// 提交前扫描：阻止敏感文件和疑似明文密钥进入提交。
+// 误报时用 git commit --no-verify 跳过。本仓库 package.json 为 type:module，故用 ESM。
+import { execSync } from "node:child_process";
+
+function sh(cmd) {
+  return execSync(cmd, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+
+// 1) 敏感文件不允许入库（即使被 git add -f 强加）
+const files = sh("git diff --cached --name-only")
+  .split("\n")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const banned = files.filter(
+  (f) =>
+    (/(^|\/)\.env(\..*)?$/.test(f) && !f.endsWith(".example")) ||
+    /(^|\/)\.dev\.vars$/.test(f),
+);
+if (banned.length) {
+  console.error(
+    `[pre-commit] 敏感文件被暂存，已阻止：\n  ${banned.join("\n  ")}\n请 git restore --staged <file> 后重试。`,
+  );
+  process.exit(1);
+}
+
+// 2) 扫描新增行中的疑似密钥
+const patterns = [
+  [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, "PEM 私钥"],
+  [/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/, "JWT"],
+  [/sk-[A-Za-z0-9]{16,}/, "sk- API key"],
+  [/(token|secret|password|api[_-]?key)\s*[:=]\s*["']?[A-Za-z0-9+/_-]{32,}/i, "疑似凭据赋值"],
+];
+const diff = sh("git diff --cached -U0");
+const hits = [];
+for (const line of diff.split("\n")) {
+  if (!line.startsWith("+")) continue;
+  for (const [re, name] of patterns) {
+    if (re.test(line)) hits.push(`  [${name}] ${line.slice(1, 120)}`);
+  }
+}
+if (hits.length) {
+  console.error(
+    `[pre-commit] 疑似明文密钥，已阻止提交：\n${hits.join("\n")}\n\n确认误报可 git commit --no-verify。`,
+  );
+  process.exit(1);
+}

@@ -2,5 +2,6 @@ node_modules/
 dist/
 .dev.vars
 .env
+.env.*
 *.log
 .workbuddy/
