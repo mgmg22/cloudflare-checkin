@@ -31,7 +31,6 @@ WB_USER_ID = ""
 TRAE_DEVICE_ID = ""
 TRAE_USER_ID = ""
 TRAE_MACHINE_ID = ""
-TRAE_APP_VERSION = "1.107.1"
 # MiniMax Code
 MINIMAX_USER_ID = ""
 MINIMAX_UUID = ""
@@ -39,6 +38,8 @@ MINIMAX_DEVICE_ID = ""
 # 美团
 MT_CLIENT_ID = ""
 MT_AISCENE = ""
+# 注：TRAE_APP_VERSION 不在此列——trae.ts 内置默认 "1.107.1"，仅需在偏离默认时
+# 用 env.TRAE_APP_VERSION 覆盖（可选，不占变量槽位）。
 
 # ── 敏感配置：Cloudflare Secret（加密，不进仓库）────────────────────────
 # 用 `bash scripts/setup-secrets.sh` 或逐个：

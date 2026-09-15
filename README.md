@@ -58,9 +58,12 @@ cloudflare-checkin/
 一键部署也会原样带过去，再在控制台填入真实值即可。
 
 - WorkBuddy：`WB_USER_ID`
-- Trae：`TRAE_DEVICE_ID` / `TRAE_USER_ID` / `TRAE_MACHINE_ID`（可选）/ `TRAE_APP_VERSION`（可选，默认 `1.107.1`）
+- Trae：`TRAE_DEVICE_ID` / `TRAE_USER_ID` / `TRAE_MACHINE_ID`（可选）
 - MiniMax：`MINIMAX_USER_ID` / `MINIMAX_UUID`（可选）/ `MINIMAX_DEVICE_ID`（可选）
 - 美团：`MT_CLIENT_ID`（可选）/ `MT_AISCENE`（可选）
+
+> `TRAE_APP_VERSION` 不在此列：trae.ts 内置默认 `1.107.1`，无需配置；仅在需要偏离默认时
+> 用 Secret/Variables 设 `TRAE_APP_VERSION` 覆盖（可选，不占默认变量槽位）。
 
 ### Secrets（加密，用 `wrangler secret put` 或控制台「Secrets」录入，不进仓库）
 

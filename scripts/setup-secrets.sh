@@ -6,9 +6,10 @@
 # 分层说明：
 #   - 敏感项（Secret）：本脚本用 `wrangler secret put` 推，加密存储、不进仓库。
 #   - 非敏感项（Variables）：WB_USER_ID / TRAE_DEVICE_ID / TRAE_USER_ID /
-#     TRAE_MACHINE_ID / TRAE_APP_VERSION / MINIMAX_USER_ID / MINIMAX_UUID /
+#     TRAE_MACHINE_ID / MINIMAX_USER_ID / MINIMAX_UUID /
 #     MINIMAX_DEVICE_ID / MT_CLIENT_ID / MT_AISCENE 已写在 wrangler.toml 的
 #     [vars]，随仓库提交，无需本脚本处理。
+#     （TRAE_APP_VERSION 未列入：trae.ts 内置默认 1.107.1，仅可在需偏离时单独覆盖。）
 set -euo pipefail
 
 SRC_ENV="${1:-/e/QinglongMy/.env}"
