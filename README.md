@@ -1,5 +1,7 @@
 # qinglong-checkin（Cloudflare Worker 版签到）
 
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
+
 把 `E:\QinglongMy` 的 Python 签到脚本重写成 **TypeScript + Cloudflare Workers**，
 由 **Cron Triggers** 定时触发，无需常驻服务器。覆盖四个任务：
 
@@ -71,6 +73,19 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 ```
 
 ## 部署（需要你自己的 Cloudflare 账号，AI 无法代为登录）
+
+### 一键部署（Deploy to Cloudflare Workers）
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
+
+> 一键部署会先 Fork 本仓库再部署，适合先跑起来看效果。
+> 但仓库里的 `wrangler.toml` 中 `CHECKIN_STATE.id` 仍是占位符 `REPLACE_WITH_YOUR_KV_ID`，
+> 且各签到 token 是 Cloudflare **Secret**（不进仓库）。
+> 因此一键部署后仍需手动做两件事，否则 Worker 运行会报错：
+> 1. `npx wrangler kv namespace create CHECKIN_STATE` 拿到 id，回填 `wrangler.toml`；
+> 2. `bash scripts/setup-secrets.sh`（或 `wrangler secret put`）推入各 token。
+
+### 手动部署（完整控制）
 
 ```bash
 cd cloudflare-checkin
