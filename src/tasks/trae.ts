@@ -206,7 +206,7 @@ export async function run(env: Env): Promise<CheckinResult> {
       const [ok, msg] = await selfHeal(env, c, appVersion);
       if (!ok) return { flag: "NO_CREDENTIAL", content: `⚠️ ${msg}` };
     } else {
-      return { flag: "NO_CREDENTIAL", content: "未获取到 token 且无续期材料，请设置 TRAE_TOKEN 或运行过 --export-keys" };
+      return { flag: "NO_CREDENTIAL", content: "未获取到 token 且无续期材料，请设置 TRAE_TOKEN，或配置 TRAE_REFRESH_TOKEN + TRAE_DEVICE_KEY_PEM + TRAE_DEVICE_PUB_PEM 以自动续期" };
     }
   } else if (canHeal(c) && expiringSoon(c)) {
     const [ok, msg] = await selfHeal(env, c, appVersion);

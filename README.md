@@ -43,7 +43,7 @@ cloudflare-checkin/
 │  ├─ tasks/              # workbuddy / trae / minimax / meituan 四个任务
 │  └─ lib/                # http / crypto / md5 / notify 公共库
 └─ scripts/
-   ├─ setup-secrets.sh    # 从本机 E:/QinglongMy/.env 批量推 Cloudflare secret
+   ├─ setup-secrets.sh    # 从本机 .env 批量推送敏感项到 Cloudflare Secret（仅 Secrets，9 项）
    └─ test-crypto.ts      # MD5 / ECDSA 加密单测
 ```
 

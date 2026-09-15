@@ -29,6 +29,7 @@ const FLAG_ICON: Record<string, string> = {
   AUTH_EXPIRED: "⚠️",
   RATE_LIMITED: "⏳",
   NO_CREDENTIAL: "⚠️",
+  STATUS_ERR: "⚠️",
   IMPORT_FAIL: "⚠️",
   ERROR: "⚠️",
 };
