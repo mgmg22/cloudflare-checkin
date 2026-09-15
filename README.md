@@ -49,18 +49,30 @@ cloudflare-checkin/
 
 ## 环境变量 / Secrets
 
-全部通过 Cloudflare **Secret**（不是写在代码里）。变量清单见 `.dev.vars.example`，
-与 `src/types.ts` 的 `Env` 一一对应：
+运行时统一从 Cloudflare Worker 的 `env` 读取——它同时包含 **Variables（明文）**
+和 **Secrets（加密）** 两类绑定，代码里 `env.X` 无差别访问。按敏感程度分层：
 
-- WorkBuddy：`WB_ACCESS_TOKEN` / `WB_USER_ID`
-- Trae：`TRAE_TOKEN` / `TRAE_DEVICE_ID` / `TRAE_USER_ID` / `TRAE_REFRESH_TOKEN` /
-  `TRAE_DEVICE_KEY_PEM` / `TRAE_DEVICE_PUB_PEM` / `TRAE_MACHINE_ID`（可选）/ `TRAE_APP_VERSION`（可选）
-- MiniMax：`MINIMAX_TOKEN` / `MINIMAX_USER_ID` / `MINIMAX_UUID`（可选）/ `MINIMAX_DEVICE_ID`（可选）
-- 美团：`MT_TOKEN` / `MT_CLIENT_ID`（可选）/ `MT_AISCENE`（可选）
+### Variables（明文，写在 `wrangler.toml` 的 `[vars]`，随仓库提交）
+
+部署后可在 Cloudflare 控制台「Workers → Settings → Variables」修改；
+一键部署也会原样带过去，再在控制台填入真实值即可。
+
+- WorkBuddy：`WB_USER_ID`
+- Trae：`TRAE_DEVICE_ID` / `TRAE_USER_ID` / `TRAE_MACHINE_ID`（可选）/ `TRAE_APP_VERSION`（可选，默认 `1.107.1`）
+- MiniMax：`MINIMAX_USER_ID` / `MINIMAX_UUID`（可选）/ `MINIMAX_DEVICE_ID`（可选）
+- 美团：`MT_CLIENT_ID`（可选）/ `MT_AISCENE`（可选）
+
+### Secrets（加密，用 `wrangler secret put` 或控制台「Secrets」录入，不进仓库）
+
+- WorkBuddy：`WB_ACCESS_TOKEN`
+- Trae：`TRAE_TOKEN` / `TRAE_REFRESH_TOKEN` / `TRAE_DEVICE_KEY_PEM` / `TRAE_DEVICE_PUB_PEM`
+- MiniMax：`MINIMAX_TOKEN`
+- 美团：`MT_TOKEN`
 - 通知：`NOTIFY_PUSH_KEY`（server酱，对应本机 `.env` 的 `PUSH_KEY_MY`）
 - 手动触发保护（可选）：`API_KEY`
 
-> `setup-secrets.sh` 已把本机 `.env` 的 `PUSH_KEY_MY` 自动映射到 `NOTIFY_PUSH_KEY`。
+> `setup-secrets.sh` 只推 **Secrets** 那 9 项（已把本机 `.env` 的 `PUSH_KEY_MY` 映射到 `NOTIFY_PUSH_KEY`）；
+> Variables 已随 `wrangler.toml` 提交，脚本不再处理。本地 `wrangler dev` 仍用 `.dev.vars` 一次性提供全部键。
 
 ## 本地开发
 
@@ -79,11 +91,11 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
 > 一键部署会先 Fork 本仓库再部署，适合先跑起来看效果。
-> 但仓库里的 `wrangler.toml` 中 `CHECKIN_STATE.id` 仍是占位符 `REPLACE_WITH_YOUR_KV_ID`，
-> 且各签到 token 是 Cloudflare **Secret**（不进仓库）。
-> 因此一键部署后仍需手动做两件事，否则 Worker 运行会报错：
-> 1. `npx wrangler kv namespace create CHECKIN_STATE` 拿到 id，回填 `wrangler.toml`；
-> 2. `bash scripts/setup-secrets.sh`（或 `wrangler secret put`）推入各 token。
+> 仓库里的 `wrangler.toml` 已含非敏感 **Variables**（`[vars]`），但：
+> 1. `CHECKIN_STATE.id` 仍是占位符 `REPLACE_WITH_YOUR_KV_ID`，需在控制台建 KV 并回填；
+> 2. 敏感 **Secrets**（token / 私钥）不进仓库，需部署后 `wrangler secret put` 或控制台录入；
+> 3. Variables 里的 ID 是空占位，需在控制台「Variables」填入真实值。
+> 否则 Worker 运行会因缺 KV / 缺密钥而报错。
 
 ### 手动部署（完整控制）
 

@@ -1,6 +1,9 @@
-# 本地开发用（wrangler dev 会读取 .dev.vars）。部署到生产请用 `wrangler secret put`。
+# 本地开发用（wrangler dev 会读取 .dev.vars）。部署到生产请用 `wrangler secret put` + wrangler.toml 的 [vars]。
 # 复制本文件为 .dev.vars 并填入真实值（不要提交 .dev.vars）。
-# 变量名与 E:/QinglongMy/.env 中的一致，可直接用 scripts/setup-secrets.sh 从本机 .env 导入。
+# 本地把 Variables（明文）和 Secrets（密钥）合并在此一处；生产环境两者分离：
+#   - Variables → 已写在 wrangler.toml [vars]（提交）
+#   - Secrets   → 用 scripts/setup-secrets.sh / wrangler secret put（加密，不提交）
+# 变量名与 E:/QinglongMy/.env 中的一致，可直接用 scripts/setup-secrets.sh 从本机 .env 导入敏感项。
 
 # ---- WorkBuddy ----
 WB_ACCESS_TOKEN=
