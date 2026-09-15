@@ -9,15 +9,3 @@ crons = ["8 16 * * *", "55 2 * * *"]
 [[kv_namespaces]]
 binding = "CHECKIN_STATE"
 id = "REPLACE_WITH_YOUR_KV_ID" # TODO：换成真实 KV id
-
-# 明文配置；敏感项走 wrangler secret put，清单见 README
-[vars]
-WB_USER_ID = ""
-TRAE_DEVICE_ID = ""
-TRAE_USER_ID = ""
-TRAE_MACHINE_ID = ""
-MINIMAX_USER_ID = ""
-MINIMAX_UUID = ""
-MINIMAX_DEVICE_ID = ""
-MT_CLIENT_ID = ""
-MT_AISCENE = ""
