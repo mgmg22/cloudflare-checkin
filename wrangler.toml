@@ -17,7 +17,8 @@ id = "REPLACE_WITH_YOUR_KV_ID"
 # - 免费版 Worker：单次 10ms CPU、50 子请求/次、账号 5 个 cron、KV 已含。
 #   签到流程只是几次顺序 HTTPS 调用 + 一次 WebCrypto 签名（网络等待不算 CPU），
 #   实测通常在 10ms CPU 内；若偶发超 CPU，升级 Paid $5/月（cron CPU 上限 15 分钟）。
-# - Cron 触发无自动重试/告警，失败请关注 Workers 日志或通知文案。
+# - Cron 失败的 scheduled 调用会被平台自动重试（handler 可调 controller.noRetry() 关闭）；
+#   无内置失败告警，失败记录见控制台「Cron Events」（近 100 次）/ Workers Logs 或通知文案。
 
 # ── 非敏感配置：明文 Variables，随仓库提交 ──────────────────────────────
 # 部署后可在 Cloudflare 控制台「Workers → Settings → Variables」直接改。

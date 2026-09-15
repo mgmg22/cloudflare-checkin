@@ -120,8 +120,9 @@ printf '%s' '<你的API_KEY>' | npx wrangler secret put API_KEY
 npx wrangler deploy
 ```
 
-部署后可在 Cloudflare 控制台「Workers → Triggers」看到两条 Cron；
-日志 / 失败排查看 Workers 的日志（免费版 Cron 无自动重试/告警）。
+部署后可在 Cloudflare 控制台「Workers & Pages → 你的 Worker → Settings → Triggers」看到两条 Cron；
+失败排查看控制台「Cron Events」（近 100 次调用）/ Workers Logs
+（Cron 失败会被平台自动重试，但无内置告警）。
 
 ## 手动触发
 
@@ -139,4 +140,4 @@ GET /?key=<API_KEY>&only=meituan   # 只跑美团（对齐美团专用 cron）
 - **滚动凭据持久化**：Trae / MiniMax 续期后的 token 写进 KV 命名空间 `CHECKIN_STATE`
   （键 `trae` / `minimax`），替代原 Python 的本地缓存文件 `.trae_token.json` / `.minimax_token.json`。
 - **免费版注意**：单次 10ms CPU、账号最多 5 个 cron、50 子请求/次、KV 已含；
-  Cron 无自动重试/告警。本流程是几次顺序 HTTPS + 一次 WebCrypto 签名，通常在 10ms CPU 内。
+  Cron 失败自动重试（可 `controller.noRetry()` 关闭）、无内置告警。本流程是几次顺序 HTTPS + 一次 WebCrypto 签名，通常在 10ms CPU 内。
