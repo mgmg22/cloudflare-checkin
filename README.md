@@ -43,14 +43,17 @@ cloudflare-checkin/
 │  ├─ tasks/              # workbuddy / trae / minimax / meituan 四个任务
 │  └─ lib/                # http / crypto / md5 / notify 公共库
 └─ scripts/
-   ├─ setup-secrets.sh    # 从本机 .env 批量推送到 Cloudflare Secret（17 项）
+   ├─ setup-secrets.sh    # 从本机 .env 批量推送文本变量（17 项，不加密）
    └─ test-crypto.ts      # MD5 / ECDSA 加密单测
 ```
 
-## 环境变量 / Secrets
+## 环境变量（文本变量，不加密）
 
-全部通过 Cloudflare **Secret**（`wrangler secret put` 或控制台录入），不进仓库。
+全部用 Cloudflare **文本变量（Variable 类型）**，不用 Secret/加密：`wrangler vars set` 或控制台录入时**不勾选「加密」**，不进仓库。
 清单与 `src/types.ts` 的 `Env` 一一对应；本地 dev 用 `.dev.vars`（见 `.dev.vars.example`）：
+
+> 一键部署向导默认把变量存成**加密 Secret**；部署后在控制台 `Settings → Variables` 逐个点开取消「加密」即可转成文本变量。
+> 想直接得到文本变量，走手动部署：`bash scripts/setup-secrets.sh`（里面用 `wrangler vars set`，非 `secret put`）。
 
 - WorkBuddy：`WB_ACCESS_TOKEN` / `WB_USER_ID`
 - Trae：`TRAE_TOKEN` / `TRAE_DEVICE_ID` / `TRAE_USER_ID` / `TRAE_REFRESH_TOKEN` /
@@ -78,7 +81,7 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
 > 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin`，无需手填。
-> 向导会列出代码用到的全部绑定（Secret），逐项填入 `.env` 对应值即可，只需填一遍；
+> 向导会列出代码用到的全部绑定（默认存为加密 Secret，部署后可在控制台 `Settings → Variables` 逐个取消「加密」转文本），逐项填入 `.env` 对应值即可，只需填一遍；
 > KV 持久化默认关闭（已在 `wrangler.toml` 注释掉），所以一键部署可直接跑通，无需先建 KV。
 > 想让 Trae / MiniMax 的续期 token 跨调用缓存：Workers & Pages → KV → 新建命名空间，
 > 复制 id 填回 `wrangler.toml` 的 `CHECKIN_STATE.id` 并取消注释对应行即可。
@@ -94,11 +97,11 @@ npx wrangler login
 # 2) （可选）建 KV 命名空间做 token 持久化；不做也能跑。要做就把 id 填进 wrangler.toml 的 CHECKIN_STATE.id 并取消注释
 npx wrangler kv namespace create CHECKIN_STATE
 
-# 3) 从本机 E:/QinglongMy/.env 批量推送 secret（17 项）
-bash scripts/setup-secrets.sh
-
-# 4) 部署
+# 3) 部署（先部署，文本变量绑定才能落库）
 npx wrangler deploy
+
+# 4) 从本机 E:/QinglongMy/.env 批量推送文本变量（17 项，不加密）
+bash scripts/setup-secrets.sh
 ```
 
 部署后可在 Cloudflare 控制台「Workers & Pages → 你的 Worker → Settings → Triggers」看到两条 Cron；

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler secret put 到 Cloudflare（全量 17 项）。
+# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler vars set 到 Cloudflare（文本变量，全量 17 项，不加密）。
 # 用法： bash scripts/setup-secrets.sh [本机 .env 路径]
 # 前置：npm install && npx wrangler login（已在本机登录 Cloudflare）
 set -euo pipefail
@@ -23,8 +23,8 @@ put() {
     echo "跳过 $name（源 .env 无值）"
     return
   fi
-  echo ">> wrangler secret put $name"
-  printf '%s' "$val" | npx wrangler secret put "$name"
+  echo ">> wrangler vars set $name"
+  printf '%s' "$val" | npx wrangler vars set "$name"
 }
 
 # ---- WorkBuddy ----
