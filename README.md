@@ -33,10 +33,9 @@ Worker 在 `scheduled()` 里用 `event.cron` 区分：命中美团 cron 只跑�
 
 ```
 cloudflare-checkin/
-├─ wrangler.toml          # Worker 配置 + 两条 cron + KV 绑定
+├─ wrangler.toml          # Worker 配置 + 两条 cron + [vars] 文本变量（17 项）+ KV 绑定（注释）
 ├─ package.json
 ├─ tsconfig.json
-├─ .dev.vars.example      # 本地 dev 用的环境变量样例（不要提交真实密钥）
 ├─ src/
 │  ├─ index.ts            # 编排：scheduled() / fetch() 手动触发
 │  ├─ types.ts            # Env / CheckinResult 类型
@@ -49,11 +48,11 @@ cloudflare-checkin/
 
 ## 环境变量（文本变量，不加密）
 
-全部用 Cloudflare **文本变量（Variable 类型）**，不用 Secret/加密：`wrangler vars set` 或控制台录入时**不勾选「加密」**，不进仓库。
-清单与 `src/types.ts` 的 `Env` 一一对应；本地 dev 用 `.dev.vars`（见 `.dev.vars.example`）：
+全部声明在 `wrangler.toml` 的 `[vars]` 块里，为 **Cloudflare 文本变量（明文，不加密）**。
+一键部署向导会读取该块，在设置页把它们**直接创建为明文 Variable**，只需填一遍，不产生任何 Secret，也不会出现重复表单。
+手动部署或本地覆盖用 `wrangler vars set` / 控制台录入时**不勾选「加密」**即可，均不进仓库。
 
-> 一键部署向导默认把变量存成**加密 Secret**；部署后在控制台 `Settings → Variables` 逐个点开取消「加密」即可转成文本变量。
-> 想直接得到文本变量，走手动部署：`bash scripts/setup-secrets.sh`（里面用 `wrangler vars set`，非 `secret put`）。
+清单与 `src/types.ts` 的 `Env` 一一对应：
 
 - WorkBuddy：`WB_ACCESS_TOKEN` / `WB_USER_ID`
 - Trae：`TRAE_TOKEN` / `TRAE_DEVICE_ID` / `TRAE_USER_ID` / `TRAE_REFRESH_TOKEN` /
@@ -62,13 +61,14 @@ cloudflare-checkin/
 - 美团：`MT_TOKEN` / `MT_CLIENT_ID`（可选）/ `MT_AISCENE`（可选）
 - 通知：`NOTIFY_PUSH_KEY`（server酱，对应本机 `.env` 的 `PUSH_KEY_MY`）
 
-> `TRAE_APP_VERSION` 内置默认 `1.107.1`，无需配置。
+> `TRAE_APP_VERSION` 内置默认 `1.107.1`，无需配置（未列入 `[vars]`）。
 
 ## 本地开发
 
 ```bash
 npm install
-cp .dev.vars.example .dev.vars   # 填入真实值（.dev.vars 已被 .gitignore 忽略）
+# 本地 dev 用：新建 .dev.vars（已被 .gitignore 忽略），把本机 .env 的同名 key 复制进去
+# （PUSH_KEY_MY 需改名为 NOTIFY_PUSH_KEY）；或用 bash scripts/setup-secrets.sh 从本机 .env 导入
 npm run test:crypto               # 跑加密单测（MD5 向量 + ECDSA 往返）
 npm run typecheck                 # tsc --noEmit
 npm run dev                       # wrangler dev 本地起服务，浏览器访问 /?key=... 手动触发
@@ -81,7 +81,7 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
 > 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin`，无需手填。
-> 向导会列出代码用到的全部绑定（默认存为加密 Secret，部署后可在控制台 `Settings → Variables` 逐个取消「加密」转文本），逐项填入 `.env` 对应值即可，只需填一遍；
+> 向导读取 `wrangler.toml` 的 `[vars]` 块，把所有变量**直接创建为明文文本变量**，在设置页逐项填一遍即可（只此一份，无重复表单，也不会变成加密 Secret）。
 > KV 持久化默认关闭（已在 `wrangler.toml` 注释掉），所以一键部署可直接跑通，无需先建 KV。
 > 想让 Trae / MiniMax 的续期 token 跨调用缓存：Workers & Pages → KV → 新建命名空间，
 > 复制 id 填回 `wrangler.toml` 的 `CHECKIN_STATE.id` 并取消注释对应行即可。

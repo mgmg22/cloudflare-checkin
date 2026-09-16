@@ -4,6 +4,27 @@
   "private": true,
   "description": "Cloudflare Worker: 每日签到自动化（WorkBuddy / Trae / MiniMax / 美团），由 Cron Triggers 触发",
   "type": "module",
+  "cloudflare": {
+    "bindings": {
+      "WB_ACCESS_TOKEN": { "description": "WorkBuddy 访问令牌（本机 .env 的 WB_ACCESS_TOKEN）" },
+      "WB_USER_ID": { "description": "WorkBuddy 用户 ID" },
+      "TRAE_TOKEN": { "description": "Trae 登录令牌（可选，留空则用刷新 token 登录）" },
+      "TRAE_DEVICE_ID": { "description": "Trae 设备 ID" },
+      "TRAE_USER_ID": { "description": "Trae 用户 ID（可选）" },
+      "TRAE_REFRESH_TOKEN": { "description": "Trae 刷新令牌" },
+      "TRAE_DEVICE_KEY_PEM": { "description": "Trae 设备私钥 base64(PEM) 单行" },
+      "TRAE_DEVICE_PUB_PEM": { "description": "Trae 设备公钥 base64(PEM) 单行" },
+      "TRAE_MACHINE_ID": { "description": "Trae 机器 ID（可选）" },
+      "MINIMAX_TOKEN": { "description": "MiniMax 登录令牌" },
+      "MINIMAX_USER_ID": { "description": "MiniMax 用户 ID" },
+      "MINIMAX_UUID": { "description": "MiniMax 设备 UUID（可选）" },
+      "MINIMAX_DEVICE_ID": { "description": "MiniMax 设备 ID（可选）" },
+      "MT_TOKEN": { "description": "美团登录令牌" },
+      "MT_CLIENT_ID": { "description": "美团客户端 ID（可选）" },
+      "MT_AISCENE": { "description": "美团 AI 场景值（可选）" },
+      "NOTIFY_PUSH_KEY": { "description": "server酱 PUSH_KEY_MY（通知用，可选）" }
+    }
+  },
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
