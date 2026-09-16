@@ -24,8 +24,8 @@ export interface Env {
   MT_AISCENE?: string;
   // 通知
   NOTIFY_PUSH_KEY?: string;
-  // KV（wrangler.toml 绑定）
-  CHECKIN_STATE: KVNamespace;
+  // KV（wrangler.toml 绑定，可选；不配置则 token 不跨调用缓存）
+  CHECKIN_STATE?: KVNamespace;
 }
 
 export interface CheckinResult {

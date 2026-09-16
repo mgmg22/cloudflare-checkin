@@ -77,11 +77,11 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
-> 一键部署会先 Fork 本仓库再部署，适合先跑起来看效果。
-> 向导会列出代码用到的全部 18 个绑定（含可选的 `API_KEY`），逐项填入 `.env` 对应值即可，只需填一遍；
-> 仓库里的 `CHECKIN_STATE.id` 仍是占位符 `REPLACE_WITH_YOUR_KV_ID`，
-> 若向导未自动创建 KV，需手动 `npx wrangler kv namespace create CHECKIN_STATE` 并回填 id，
-> 否则 Worker 运行会因缺 KV 而报错。
+> 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin`，无需手填。
+> 向导会列出代码用到的全部绑定（Secret），逐项填入 `.env` 对应值即可，只需填一遍；
+> KV 持久化默认关闭（已在 `wrangler.toml` 注释掉），所以一键部署可直接跑通，无需先建 KV。
+> 想让 Trae / MiniMax 的续期 token 跨调用缓存：Workers & Pages → KV → 新建命名空间，
+> 复制 id 填回 `wrangler.toml` 的 `CHECKIN_STATE.id` 并取消注释对应行即可。
 
 ### 手动部署（完整控制）
 
@@ -91,13 +91,11 @@ cd cloudflare-checkin
 # 1) 登录 Cloudflare（浏览器授权）
 npx wrangler login
 
-# 2) 建 KV 命名空间，把返回的 id 填进 wrangler.toml 的 CHECKIN_STATE.id
+# 2) （可选）建 KV 命名空间做 token 持久化；不做也能跑。要做就把 id 填进 wrangler.toml 的 CHECKIN_STATE.id 并取消注释
 npx wrangler kv namespace create CHECKIN_STATE
 
-# 3) 从本机 E:/QinglongMy/.env 批量推送 secret（含可选 API_KEY）
+# 3) 从本机 E:/QinglongMy/.env 批量推送 secret（17 项）
 bash scripts/setup-secrets.sh
-# 可选：设手动触发密码
-printf '%s' '<你的API_KEY>' | npx wrangler secret put API_KEY
 
 # 4) 部署
 npx wrangler deploy

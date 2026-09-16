@@ -131,16 +131,18 @@ async function selfHeal(env: Env, c: TraeCred, appVersion: string): Promise<[boo
   c.refresh_token = fields.refresh_token;
   c.expires_ms = fields.expires_ms;
   c.refresh_expires_ms = fields.refresh_expires_ms;
-  await env.CHECKIN_STATE.put(
-    STORE_KEY,
-    JSON.stringify({
-      token: c.token,
-      refresh_token: c.refresh_token,
-      expires_ms: c.expires_ms,
-      refresh_expires_ms: c.refresh_expires_ms,
-      updated_at: Date.now(),
-    }),
-  );
+  if (env.CHECKIN_STATE) {
+    await env.CHECKIN_STATE.put(
+      STORE_KEY,
+      JSON.stringify({
+        token: c.token,
+        refresh_token: c.refresh_token,
+        expires_ms: c.expires_ms,
+        refresh_expires_ms: c.refresh_expires_ms,
+        updated_at: Date.now(),
+      }),
+    );
+  }
   const remain = c.expires_ms ? (c.expires_ms - Date.now()) / 86400000 : 0;
   return [true, `已自动续期 token（新有效期约 ${remain.toFixed(1)} 天）`];
 }
@@ -193,8 +195,10 @@ export async function run(env: Env): Promise<CheckinResult> {
   const appVersion = env.TRAE_APP_VERSION || APP_VERSION;
   const c = readCred(env);
 
-  // 合并 KV 中续期后的滚动凭据
-  const cached = await env.CHECKIN_STATE.get(STORE_KEY).then((r) => (r ? JSON.parse(r) : null)).catch(() => null);
+  // 合并 KV 中续期后的滚动凭据（未绑定 KV 时跳过）
+  const cached = env.CHECKIN_STATE
+    ? await env.CHECKIN_STATE.get(STORE_KEY).then((r) => (r ? JSON.parse(r) : null)).catch(() => null)
+    : null;
   if (cached) {
     for (const k of ["token", "refresh_token", "expires_ms", "refresh_expires_ms"]) {
       if (cached[k]) (c as any)[k] = cached[k];

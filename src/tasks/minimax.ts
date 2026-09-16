@@ -172,8 +172,10 @@ export async function run(env: Env): Promise<CheckinResult> {
     return { flag: "NO_CREDENTIAL", content: "未获取到 MiniMax 登录态，请设置 MINIMAX_TOKEN / MINIMAX_USER_ID" };
   }
 
-  // 候选 token：优先 KV 续期缓存，回落环境变量
-  const cached = await env.CHECKIN_STATE.get(STORE_KEY).then((r) => (r ? JSON.parse(r) : null)).catch(() => null);
+  // 候选 token：优先 KV 续期缓存，回落环境变量（未绑定 KV 时跳过）
+  const cached = env.CHECKIN_STATE
+    ? await env.CHECKIN_STATE.get(STORE_KEY).then((r) => (r ? JSON.parse(r) : null)).catch(() => null)
+    : null;
   let token = cached?.token && tokenAlive(cached.token) ? cached.token : (env.MINIMAX_TOKEN || "").trim();
   if (!token) return { flag: "NO_CREDENTIAL", content: "未获取到 MiniMax 登录态，请设置 MINIMAX_TOKEN" };
 
@@ -185,7 +187,9 @@ export async function run(env: Env): Promise<CheckinResult> {
   const newToken = typeof rb === "object" ? (rb?.data?.token || "").trim() : "";
   if (newToken) {
     token = newToken;
-    await env.CHECKIN_STATE.put(STORE_KEY, JSON.stringify({ token, updated_at: Date.now() }));
+    if (env.CHECKIN_STATE) {
+      await env.CHECKIN_STATE.put(STORE_KEY, JSON.stringify({ token, updated_at: Date.now() }));
+    }
   }
 
   // 2) 状态查询（GET）
