@@ -37,12 +37,12 @@ cloudflare-checkin/
 ├─ package.json
 ├─ tsconfig.json
 ├─ src/
-│  ├─ index.ts            # 编排：scheduled() / fetch() 手动触发
+│  ├─ index.ts            # 编排：scheduled() 定时触发 / fetch() 手动触发（/?run=1、/?run=1&only=meituan）
 │  ├─ types.ts            # Env / CheckinResult 类型
 │  ├─ tasks/              # workbuddy / trae / minimax / meituan 四个任务
 │  └─ lib/                # http / crypto / md5 / notify 公共库
 └─ scripts/
-   ├─ setup-secrets.sh    # 从本机 .env 批量推送文本变量（17 项，不加密）
+   ├─ setup-secrets.sh    # 推送文本变量到 Cloudflare（17 项，不加密）；Trae 的 token/refresh_token 优先取 py 续期缓存 .trae_token.json
    └─ test-crypto.ts      # MD5 / ECDSA 加密单测
 ```
 
@@ -68,10 +68,10 @@ cloudflare-checkin/
 ```bash
 npm install
 # 本地 dev 用：新建 .dev.vars（已被 .gitignore 忽略），把本机 .env 的同名 key 复制进去
-# （PUSH_KEY_MY 需改名为 NOTIFY_PUSH_KEY）；或用 bash scripts/setup-secrets.sh 从本机 .env 导入
+# （PUSH_KEY_MY 需改名为 NOTIFY_PUSH_KEY）。setup-secrets.sh 走 `wrangler vars set` 写入云端 Worker 变量，仅用于部署，不生成本地 .dev.vars
 npm run test:crypto               # 跑加密单测（MD5 向量 + ECDSA 往返）
 npm run typecheck                 # tsc --noEmit
-npm run dev                       # wrangler dev 本地起服务，浏览器访问 /?key=... 手动触发
+npm run dev                       # wrangler dev 本地起服务，浏览器访问 /?run=1 手动触发（/?run=1&only=meituan 仅美团）
 ```
 
 ## 部署（需要你自己的 Cloudflare 账号，AI 无法代为登录）
@@ -100,7 +100,9 @@ npx wrangler kv namespace create CHECKIN_STATE
 # 3) 部署（先部署，文本变量绑定才能落库）
 npx wrangler deploy
 
-# 4) 从本机 E:/QinglongMy/.env 批量推送文本变量（17 项，不加密）
+# 4) 推送文本变量到 Cloudflare（17 项，不加密）。Trae 的 token / refresh_token
+#    优先取自 py 续期缓存 .trae_token.json（避免 .env 里的旧快照失效）。
+#    用法：bash scripts/setup-secrets.sh [本机 .env 路径] [缓存 json 路径]
 bash scripts/setup-secrets.sh
 ```
 
@@ -115,5 +117,7 @@ bash scripts/setup-secrets.sh
   `crypto.ts` 把 P1363 拆成 `(r,s)`、做低 s 归一化后重编码成 DER（Trae 服务端按 DER 校验）。
 - **滚动凭据持久化**：Trae / MiniMax 续期后的 token 写进 KV 命名空间 `CHECKIN_STATE`
   （键 `trae` / `minimax`），替代原 Python 的本地缓存文件 `.trae_token.json` / `.minimax_token.json`。
+  首跑 / KV 为空时依赖 `[vars]` 里的初始 `TRAE_REFRESH_TOKEN`，请填 py 续期缓存 `.trae_token.json`
+  中的新鲜值（而非 `.env` 快照）——`scripts/setup-secrets.sh` 已默认这样取，正是本地与 py 表现一致的关键。
 - **免费版注意**：单次 10ms CPU、账号最多 5 个 cron、50 子请求/次、KV 已含；
   Cron 失败自动重试（可 `controller.noRetry()` 关闭）、无内置告警。本流程是几次顺序 HTTPS + 一次 WebCrypto 签名，通常在 10ms CPU 内。
