@@ -6,32 +6,6 @@ compatibility_date = "2024-11-01"
 [triggers]
 crons = ["8 16 * * *", "55 2 * * *"]
 
-# 环境变量：全部为文本变量（明文，不加密）。一键部署向导读取本 [vars] 块，
-# 在设置页把它们直接创建为明文 Variable，用户填一遍即可；不声明任何 Secret，避免表单重复。
-[vars]
-# ---- WorkBuddy ----
-WB_ACCESS_TOKEN = ""
-WB_USER_ID = ""
-# ---- Trae Work ----
-TRAE_TOKEN = ""
-TRAE_DEVICE_ID = ""
-TRAE_USER_ID = ""
-TRAE_REFRESH_TOKEN = ""
-TRAE_DEVICE_KEY_PEM = ""
-TRAE_DEVICE_PUB_PEM = ""
-TRAE_MACHINE_ID = ""
-# ---- MiniMax Code ----
-MINIMAX_TOKEN = ""
-MINIMAX_USER_ID = ""
-MINIMAX_UUID = ""
-MINIMAX_DEVICE_ID = ""
-# ---- 美团 ----
-MT_TOKEN = ""
-MT_CLIENT_ID = ""
-MT_AISCENE = ""
-# ---- 通知（server酱 PUSH_KEY_MY 的值）----
-NOTIFY_PUSH_KEY = ""
-
 # 持久化 KV（Trae / MiniMax 续期后的滚动 token）：默认关闭，方便一键部署直接跑起来。
 # 要开启持久化：Workers & Pages → KV → 新建命名空间，复制 id 填到下面并取消注释即可。
 # 不配置也能正常签到，只是 token 不跨调用缓存（每次用刷新 token 重新登录）。

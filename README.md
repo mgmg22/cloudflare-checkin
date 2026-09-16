@@ -33,7 +33,7 @@ Worker 在 `scheduled()` 里用 `event.cron` 区分：命中美团 cron 只跑�
 
 ```
 cloudflare-checkin/
-├─ wrangler.toml          # Worker 配置 + 两条 cron + [vars] 文本变量（17 项）+ KV 绑定（注释）
+├─ wrangler.toml          # Worker 配置 + 两条 cron + KV 绑定（注释）；变量不写死在 [vars]，改由控制台 / setup-secrets.sh 注入
 ├─ package.json
 ├─ tsconfig.json
 ├─ src/
@@ -48,9 +48,13 @@ cloudflare-checkin/
 
 ## 环境变量（文本变量，不加密）
 
-全部声明在 `wrangler.toml` 的 `[vars]` 块里，为 **Cloudflare 文本变量（明文，不加密）**。
-一键部署向导会读取该块，在设置页把它们**直接创建为明文 Variable**，只需填一遍，不产生任何 Secret，也不会出现重复表单。
-手动部署或本地覆盖用 `wrangler vars set` / 控制台录入时**不勾选「加密」**即可，均不进仓库。
+**不再写进 `wrangler.toml` 的 `[vars]` 块**（否则 `wrangler deploy` 会把控制台已填好的真实值清空成空）。
+统一为 **Cloudflare 文本变量（明文，不加密）**，首次设置任选其一，之后长期有效、不被部署覆盖：
+
+- 跑 `bash scripts/setup-secrets.sh` 把本机 `.env` 的 17 项一键推送（Trae 的 token/refresh 优先取 py 续期缓存 `.trae_token.json`）；
+- 或在 Cloudflare 控制台「Workers & Pages → 你的 Worker → Settings → Variables」逐项录入，**不勾选「加密」**。
+
+手动覆盖同样用 `wrangler vars set` / 控制台录入，均不进仓库。
 
 清单与 `src/types.ts` 的 `Env` 一一对应：
 
@@ -76,12 +80,32 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 
 ## 部署（需要你自己的 Cloudflare 账号，AI 无法代为登录）
 
+### 自动部署（GitHub Actions，push 即上线，推荐）
+
+仓库根 `.github/workflows/deploy.yml` 在每次 push 到 `main` 时自动跑 `wrangler deploy`：
+
+```yaml
+on: push: branches: [main]
+uses: cloudflare/wrangler-action@v3
+with:
+  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+```
+
+前置：在仓库 `Settings → Secrets and variables → Actions` 添加两个 secret：
+
+- `CLOUDFLARE_API_TOKEN`：Cloudflare 后台 *Account API Tokens* 新建，给 **Edit Cloudflare Workers** 权限；
+- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 控制台 Overview 的 Account ID。
+
+因为是纯代码部署、`wrangler.toml` 不含 `[vars]`，**部署不会清空你在控制台填好的变量**，每次 push 只是更新代码。变量首次用 `setup-secrets.sh` 或手动录入后长期有效。
+
 ### 一键部署（Deploy to Cloudflare Workers）
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
 > 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin`，无需手填。
-> 向导读取 `wrangler.toml` 的 `[vars]` 块，把所有变量**直接创建为明文文本变量**，在设置页逐项填一遍即可（只此一份，无重复表单，也不会变成加密 Secret）。
+> 由于变量已不在 `[vars]`，向导**不再预生成变量表单**——部署完成后，运行 `bash scripts/setup-secrets.sh`
+> （或去控制台 Variables 手动录入，均不加密）把 17 项文本变量推上去即可。
 > KV 持久化默认关闭（已在 `wrangler.toml` 注释掉），所以一键部署可直接跑通，无需先建 KV。
 > 想让 Trae / MiniMax 的续期 token 跨调用缓存：Workers & Pages → KV → 新建命名空间，
 > 复制 id 填回 `wrangler.toml` 的 `CHECKIN_STATE.id` 并取消注释对应行即可。
