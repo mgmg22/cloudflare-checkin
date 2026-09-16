@@ -1,6 +1,6 @@
 import type { CheckinResult, Env } from "../types";
 import { postJson } from "../lib/http";
-import { signCanonical } from "../lib/crypto";
+import { signCanonical, resolvePem } from "../lib/crypto";
 
 const HOST = "https://api.trae.cn";
 const STATUS_PATH = "/trae/api/v2/ug/checkin_credits/status";
@@ -81,7 +81,7 @@ function buildDeviceInfo(c: TraeCred, appVersion: string): any {
     DeviceName: "user",
     DeviceModel: "",
     ClientVersion: appVersion,
-    DevicePublicKey: c.device_pub_pem,
+    DevicePublicKey: resolvePem(c.device_pub_pem),
     DeviceBrand: "",
     DeviceCPU: "",
     OSInfo: "Windows",

@@ -88,6 +88,22 @@ async function runAll(env: Env, onlyMeituan = false): Promise<string> {
 const MEITUAN_CRON = "55 2 * * *";
 
 export default {
+  // 本地手动触发（仅开发期使用，不进生产逻辑分支）：
+  //   /?run=1               -> 跑聚合三项（WorkBuddy / Trae / MiniMax）
+  //   /?run=1&only=meituan  -> 仅跑美团
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.searchParams.get("run") !== "1") {
+      return new Response(
+        "本地手动触发请访问 /?run=1（聚合三项）或 /?run=1&only=meituan（仅美团）",
+        { status: 400, headers: { "content-type": "text/plain; charset=utf-8" } },
+      );
+    }
+    const onlyMeituan = url.searchParams.get("only") === "meituan";
+    const summary = await runAll(env, onlyMeituan);
+    return new Response(summary, { headers: { "content-type": "text/plain; charset=utf-8" } });
+  },
+
   async scheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
     // event.cron 为空（部分本地/旧运行时）时回落到跑全部
     const onlyMeituan = event.cron === MEITUAN_CRON;
