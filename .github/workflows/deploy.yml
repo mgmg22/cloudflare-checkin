@@ -27,9 +27,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # 直接调用项目本地安装的 wrangler（npm ci 装好的 3.78），
+      # 不依赖 cloudflare/wrangler-action 的版本解析（其默认 Wrangler 3.90.0 已 EOL 且常导致 exit 1）。
+      # 凭据通过环境变量传入，对应 GitHub Secrets：
+      #   CLOUDFLARE_API_TOKEN  —— Cloudflare「Edit Cloudflare Workers」权限的 API Token
+      #   CLOUDFLARE_ACCOUNT_ID —— Cloudflare 控制台右侧的 Account ID
       - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "3"
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
