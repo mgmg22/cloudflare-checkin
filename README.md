@@ -80,24 +80,28 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 
 ## 部署（需要你自己的 Cloudflare 账号，AI 无法代为登录）
 
-### 自动部署（GitHub Actions，push 即上线，推荐）
+### 自动部署（Cloudflare Git 集成，push 即上线，零 secret，推荐）
 
-仓库根 `.github/workflows/deploy.yml` 在每次 push 到 `main` 时自动跑 `wrangler deploy`：
+在 Cloudflare 控制台把 Worker 连到本仓库，push 到 `main` 自动构建部署。**GitHub 侧无需配置任何 secret**：仓库读取走 Cloudflare GitHub App 的 OAuth 授权，部署用 API token 由 Cloudflare 自动生成并保存在 CF 侧。
 
-```yaml
-on: push: branches: [main]
-uses: cloudflare/wrangler-action@v3
-with:
-  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-```
+连接步骤（Workers & Pages → `qinglong-checkin` → Settings → Builds）：
 
-前置：在仓库 `Settings → Secrets and variables → Actions` 添加两个 secret：
+1. 若之前连过别的仓库（如一键部署 fork 出的副本），先 **Disconnect**；
+2. **Connect** → 选 GitHub → 选**原始仓库 `mgmg22/cloudflare-checkin`** → 分支 `main`；
+3. 构建配置：Build command 留空（纯 Worker 无需构建）、Deploy command 默认 `npx wrangler deploy`、Root directory 留空（仓库根）。
 
-- `CLOUDFLARE_API_TOKEN`：Cloudflare 后台 *Account API Tokens* 新建，给 **Edit Cloudflare Workers** 权限；
-- `CLOUDFLARE_ACCOUNT_ID`：Cloudflare 控制台 Overview 的 Account ID。
+> ⚠️ 一定连**原始仓库**。用「一键部署」按钮时 Cloudflare 会 fork 一份副本并对接副本，导致 push 原仓库永远不更新——这正是"push 不生效"的根因。
 
 因为是纯代码部署、`wrangler.toml` 不含 `[vars]`，**部署不会清空你在控制台填好的变量**，每次 push 只是更新代码。变量首次用 `setup-secrets.sh` 或手动录入后长期有效。
+
+### 备选：GitHub Actions 部署（需配 1~2 个 secret）
+
+若更想在 GitHub 侧控制部署，可自建 `.github/workflows/deploy.yml`（`on: push → branches: [main]`）直接跑 `npm run deploy`，并在仓库 `Settings → Secrets and variables → Actions` 配置：
+
+- `CLOUDFLARE_API_TOKEN`（**必需**——CI 非交互环境下 wrangler 唯一正规鉴权方式；Cloudflare 后台 *Edit Cloudflare Workers* 模板创建）；
+- `CLOUDFLARE_ACCOUNT_ID`（**可选**——token 只授权单账号时 wrangler 自动推断，无需配置）。
+
+坑提醒：不要依赖 `cloudflare/wrangler-action@v3` 的默认 Wrangler（3.90.0 已 EOL，常致 exit 1）；直接 `npm run deploy` 用项目本地 wrangler 更稳。
 
 ### 一键部署（Deploy to Cloudflare Workers）
 
