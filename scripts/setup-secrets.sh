@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler vars set 到 Cloudflare（文本变量，全量 17 项，不加密）。
+# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler vars set 到 Cloudflare（文本变量，全量 15 项，不加密）。
 # 用法： bash scripts/setup-secrets.sh [本机 .env 路径]
 # 前置：npm install && npx wrangler login（已在本机登录 Cloudflare）
 set -euo pipefail
@@ -43,6 +43,7 @@ put() {
 # ---- WorkBuddy ----
 put WB_ACCESS_TOKEN "$(get WB_ACCESS_TOKEN)"
 put WB_USER_ID "$(get WB_USER_ID)"
+put WB_DOMAIN "$(get WB_DOMAIN)"
 # ---- Trae Work ----（token / refresh_token 优先取自 .trae_token.json 新鲜值）
 TRAE_TOKEN_VAL="$(get_cache token)"; [ -z "$TRAE_TOKEN_VAL" ] && TRAE_TOKEN_VAL="$(get TRAE_TOKEN)"
 put TRAE_TOKEN "$TRAE_TOKEN_VAL"
@@ -58,10 +59,6 @@ put MINIMAX_TOKEN "$(get MINIMAX_TOKEN)"
 put MINIMAX_USER_ID "$(get MINIMAX_USER_ID)"
 put MINIMAX_UUID "$(get MINIMAX_UUID)"
 put MINIMAX_DEVICE_ID "$(get MINIMAX_DEVICE_ID)"
-# ---- 美团 ----
-put MT_TOKEN "$(get MT_TOKEN)"
-put MT_CLIENT_ID "$(get MT_CLIENT_ID)"
-put MT_AISCENE "$(get MT_AISCENE)"
 # ---- 通知（server酱 PUSH_KEY_MY）----
 put NOTIFY_PUSH_KEY "$(get PUSH_KEY_MY)"
 

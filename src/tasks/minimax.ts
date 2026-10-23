@@ -1,3 +1,7 @@
+/// MiniMax Code 每日签到任务：对齐 py 版 minimax_checkin.py。
+/// 职责边界：先续期（/v1/api/user/renewal，等价重新登录）再签到，新 token 写回 KV 缓存自愈；
+/// 多候选 token（环境变量 / KV 缓存）依次重试；yy/x-signature 签名见 signRequest。
+
 import type { CheckinResult, Env } from "../types";
 import { md5hex } from "../lib/md5";
 
@@ -15,8 +19,23 @@ const DEVICE_PARAM_ORDER = [
   "op_ticket", "screen_width", "screen_height",
 ];
 
+// 稳定的默认设备身份：仅在未设置对应变量时回落使用，避免设备指纹漂移（对齐 py）
 const DEFAULT_UUID = "3548c8fa-9ac2-4a28-8f6b-71ecd88bc048";
 const DEFAULT_DEVICE_ID = "1790426211";
+
+const AUTH_FAIL_KEYWORDS = ["unauthorized", "token", "expired", "not login",
+  "not logged", "登录", "鉴权", "invalid", "异常用户"];
+const RATE_LIMIT_KEYWORDS = ["频繁", "frequent", "too many", "太多", "稍后再试",
+  "繁忙", "busy", "limit"];
+
+/** 清洗变量：去首尾空白、去误粘贴的成对引号（对齐 py clean_env_value，青龙/手填最常见 401 元凶）。 */
+function cleanValue(raw: string): string {
+  let s = (raw || "").trim();
+  while (s.length >= 2 && s[0] === s[s.length - 1] && (s[0] === "'" || s[0] === '"')) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
 
 function pyQuotePlus(s: string): string {
   // 对齐 Python urllib.parse.quote_plus 的安全字符集（字母数字 + _ . - ~，空格->+）
@@ -65,6 +84,7 @@ interface Signed {
 function signRequest(path: string, token: string, params: Record<string, string>, method: string, body: any): Signed {
   const nowMs = Date.now();
   const nowSec = Math.floor(nowMs / 1000);
+  // 设备参数里 unix 必须与签名用的 nowMs 完全一致（对齐 py _sign_request）
   const p = { ...params, unix: String(nowMs), client: "desktop" };
   const query = Object.entries(p)
     .map(([k, v]) => `${pyQuotePlus(k)}=${pyQuotePlus(v)}`)
@@ -153,7 +173,15 @@ function isAuthFailure(sc: number, d: any): boolean {
   const si = d?.statusInfo;
   if (si && (si.code === 1000021 || si.code === 1000022 || si.code === 1000023)) return true;
   const msg = String(d?.message || d?.msg || "").toLowerCase();
-  return ["unauthorized", "token", "expired", "not login", "登录", "鉴权", "invalid", "异常用户"].some((k) => msg.includes(k));
+  // 命中限频词先排除，避免"请求过于频繁"被误判为鉴权失败（对齐 py is_auth_failure）
+  if (RATE_LIMIT_KEYWORDS.some((k) => msg.toLowerCase().includes(k))) return false;
+  return AUTH_FAIL_KEYWORDS.some((k) => msg.includes(k));
+}
+
+function isRateLimited(sc: number, d: any): boolean {
+  if (sc === 429 || sc === 500 || sc === 502 || sc === 503 || sc === 504) return true;
+  const msg = String(d?.message || d?.msg || "");
+  return RATE_LIMIT_KEYWORDS.some((k) => msg.includes(k));
 }
 
 function serverMsg(d: any): string {
@@ -164,62 +192,122 @@ function serverMsg(d: any): string {
   return String(d?.message || d?.msg || "");
 }
 
-export async function run(env: Env): Promise<CheckinResult> {
-  const user_id = (env.MINIMAX_USER_ID || "").trim();
-  const uuid = (env.MINIMAX_UUID || "").trim() || DEFAULT_UUID;
-  const device_id = (env.MINIMAX_DEVICE_ID || "").trim() || DEFAULT_DEVICE_ID;
-  if (!user_id) {
-    return { flag: "NO_CREDENTIAL", content: "未获取到 MiniMax 登录态，请设置 MINIMAX_TOKEN / MINIMAX_USER_ID" };
-  }
-
-  // 候选 token：优先 KV 续期缓存，回落环境变量（未绑定 KV 时跳过）
-  const cached = env.CHECKIN_STATE
-    ? await env.CHECKIN_STATE.get(STORE_KEY).then((r) => (r ? JSON.parse(r) : null)).catch(() => null)
-    : null;
-  let token = cached?.token && tokenAlive(cached.token) ? cached.token : (env.MINIMAX_TOKEN || "").trim();
-  if (!token) return { flag: "NO_CREDENTIAL", content: "未获取到 MiniMax 登录态，请设置 MINIMAX_TOKEN" };
-
-  const params = buildDeviceParams(user_id, uuid, device_id);
-
-  // 1) 先续期
-  const rSigned = signRequest(RENEW_PATH, token, params, "POST", {});
-  const [rc, rb] = await apiCall(rSigned, "POST");
-  const newToken = typeof rb === "object" ? (rb?.data?.token || "").trim() : "";
+/** 用指定 token 走一遍「续期 -> 状态 -> 领取」（对齐 py _try_checkin）。 */
+async function tryCheckin(
+  params: Record<string, string>,
+  token: string,
+  source: string,
+  storeRenewed: (t: string) => Promise<void>,
+): Promise<CheckinResult> {
+  // 1) 先续期（等价于重新登录一次，新 token 有效期顺延 ~40 天）
+  let renewed = false;
+  const [rc, rb] = await apiCall(signRequest(RENEW_PATH, token, params, "POST", {}), "POST");
+  const newToken = typeof rb === "object" ? String(rb?.data?.token || "").trim() : "";
   if (newToken) {
     token = newToken;
-    if (env.CHECKIN_STATE) {
-      await env.CHECKIN_STATE.put(STORE_KEY, JSON.stringify({ token, updated_at: Date.now() }));
-    }
+    renewed = true;
+    await storeRenewed(newToken);
+    console.log(`[miniMax] 续期成功（来源 ${source}），已写回 KV 缓存`);
+  } else if (rc) {
+    console.log(`[miniMax] 续期失败：HTTP ${rc}（沿用原 token 继续尝试）`);
   }
+  const extra = renewed ? "（已自动续期 token）" : "";
 
   // 2) 状态查询（GET）
-  const sSigned = signRequest(STATUS_PATH, token, params, "GET", {});
-  const [sc, sb] = await apiCall(sSigned, "GET");
+  const [sc, sb] = await apiCall(signRequest(STATUS_PATH, token, params, "GET", {}), "GET");
   if (isAuthFailure(sc, sb)) {
     return { flag: "AUTH_EXPIRED", content: `⚠️ 鉴权失败：${serverMsg(sb) || `HTTP ${sc}`}` };
   }
   if (!apiSucceeded(sb)) {
     return { flag: "STATUS_ERR", content: `⚠️ 状态查询异常：HTTP ${sc} ${serverMsg(sb) || JSON.stringify(sb).slice(0, 150)}` };
   }
-  const days = (sb?.data?.days) || [];
+  // 解析今日签到状态：days[] 中 is_today=true 的那天，status==3 表示已领取
+  const days = sb?.data?.days || [];
   const today = days.find((d: any) => d.is_today);
   if (today && today.status === 3) {
-    return { flag: "ALREADY_TODAY", content: `ℹ️ 今日已签到（第 ${today.day_no} 天）${newToken ? "（已自动续期 token）" : ""}` };
+    return { flag: "ALREADY_TODAY", content: `ℹ️ 今日已签到（第 ${today.day_no} 天）${extra}` };
   }
 
-  // 3) 领取（POST）
-  const cSigned = signRequest(CLAIM_PATH, token, params, "POST", {});
-  const [cc, cb] = await apiCall(cSigned, "POST");
+  // 3) 领取（POST，body {}）
+  const [cc, cb] = await apiCall(signRequest(CLAIM_PATH, token, params, "POST", {}), "POST");
   if (isAuthFailure(cc, cb)) {
     return { flag: "AUTH_EXPIRED", content: `⚠️ 鉴权失败：${serverMsg(cb) || `HTTP ${cc}`}` };
   }
+  if (isRateLimited(cc, cb)) {
+    const msg = serverMsg(cb) || JSON.stringify(cb).slice(0, 120);
+    return { flag: "RATE_LIMITED", content: `⏳ 服务端限频：${msg}，建议错峰或稍后重试` };
+  }
   if (apiSucceeded(cb)) {
+    // 解析领取结果：claim_result 1=新领取成功，2=今日已领取
     const cdata = cb?.data || {};
     if (cdata.claim_result === 2) {
-      return { flag: "ALREADY_TODAY", content: `ℹ️ 今日已签到（claim_result=2）${newToken ? "（已自动续期 token）" : ""}` };
+      return { flag: "ALREADY_TODAY", content: `ℹ️ 今日已签到（claim_result=2）${extra}` };
     }
     const gain = cdata.points != null ? `本次 +${cdata.points} 积分` : "签到成功";
-    return { flag: "SUCCESS", content: `✅ ${gain}（第 ${cdata.day_no} 天）${newToken ? "（已自动续期 token）" : ""}` };
+    return { flag: "SUCCESS", content: `✅ ${gain}（第 ${cdata.day_no} 天）${extra}` };
   }
   return { flag: "FAIL", content: `⚠️ 领取未成功：HTTP ${cc} ${serverMsg(cb) || JSON.stringify(cb).slice(0, 150)}` };
+}
+
+export async function run(env: Env): Promise<CheckinResult> {
+  const user_id = cleanValue(env.MINIMAX_USER_ID || "");
+  const uuid = cleanValue(env.MINIMAX_UUID || "") || DEFAULT_UUID;
+  const device_id = cleanValue(env.MINIMAX_DEVICE_ID || "") || DEFAULT_DEVICE_ID;
+  if (!user_id) {
+    return { flag: "NO_CREDENTIAL", content: "未获取到 MiniMax 登录态，请设置 MINIMAX_TOKEN / MINIMAX_USER_ID" };
+  }
+
+  const params = buildDeviceParams(user_id, uuid, device_id);
+  const storeRenewed = async (t: string) => {
+    if (env.CHECKIN_STATE) {
+      await env.CHECKIN_STATE.put(STORE_KEY, JSON.stringify({ token: t, updated_at: Date.now() }));
+    }
+  };
+
+  // 候选 token（对齐 py _candidate_tokens）：存活的排前（env 在前、KV 缓存在后），再补未存活项，去重
+  const envToken = cleanValue(env.MINIMAX_TOKEN || "");
+  let cacheToken = "";
+  if (env.CHECKIN_STATE) {
+    const cached = await env.CHECKIN_STATE.get(STORE_KEY)
+      .then((r) => (r ? JSON.parse(r) : null)).catch(() => null);
+    cacheToken = cleanValue(cached?.token || "");
+  }
+  const candidates: [string, string][] = [];
+  const push = (t: string, tag: string) => {
+    if (t && !candidates.some(([x]) => x === t)) candidates.push([t, tag]);
+  };
+  if (envToken && tokenAlive(envToken)) push(envToken, "环境变量");
+  if (cacheToken && tokenAlive(cacheToken)) push(cacheToken, "KV 缓存");
+  push(envToken, "环境变量");
+  push(cacheToken, "KV 缓存");
+  if (!candidates.length) {
+    return { flag: "NO_CREDENTIAL", content: "未获取到 MiniMax 登录态，请设置 MINIMAX_TOKEN" };
+  }
+
+  // 依次尝试各候选；SUCCESS / ALREADY_TODAY / RATE_LIMITED 提前返回，其余换下一个
+  let last: CheckinResult = { flag: "NO_CREDENTIAL", content: "未获取到 MiniMax 登录态" };
+  for (const [token, source] of candidates) {
+    let r: CheckinResult;
+    try {
+      r = await tryCheckin(params, token, source, storeRenewed);
+    } catch (e: any) {
+      r = { flag: "ERROR", content: `⚠️ 执行异常（token 来源：${source}）：${e?.message || e}` };
+      console.error(`[miniMax] ${r.content}`);
+    }
+    if (r.flag === "SUCCESS" || r.flag === "ALREADY_TODAY" || r.flag === "RATE_LIMITED") return r;
+    last = r;
+    console.log(`[miniMax] token 来源 ${source} 失败：RESULT=${r.flag} | ${r.content}`);
+  }
+
+  // 全部候选都失败：补一条可操作提示（对齐 py checkin_once）
+  if (last.flag === "AUTH_EXPIRED") {
+    last = {
+      flag: last.flag,
+      content: last.content +
+        "｜处理：①本机 python minimax_checkin.py --export-env --save 重新导出；" +
+        "②把新的 MINIMAX_TOKEN 更新到 Worker 变量（注意别带引号）；" +
+        "③若确认 token 无误仍 401，多为出口 IP 被风控",
+    };
+  }
+  return last;
 }

@@ -170,6 +170,11 @@ function isAuthFailure(sc: number, d: any): boolean {
   return false;
 }
 
+// 仅凭状态码判断，429 或 5xx 视为限频/临时故障（对齐 py is_rate_limited）
+function isRateLimited(sc: number): boolean {
+  return sc === 429 || sc === 500 || sc === 502 || sc === 503 || sc === 504;
+}
+
 async function queryPoints(token: string, deviceId: string): Promise<number | null> {
   const [sc, sb] = await postJson(HOST + ENTITLEMENT_PATH, buildHeaders(token, deviceId), { require_usage: true });
   try {
@@ -210,7 +215,8 @@ export async function run(env: Env): Promise<CheckinResult> {
       const [ok, msg] = await selfHeal(env, c, appVersion);
       if (!ok) return { flag: "NO_CREDENTIAL", content: `⚠️ ${msg}` };
     } else {
-      return { flag: "NO_CREDENTIAL", content: "未获取到 token 且无续期材料，请设置 TRAE_TOKEN，或配置 TRAE_REFRESH_TOKEN + TRAE_DEVICE_KEY_PEM + TRAE_DEVICE_PUB_PEM 以自动续期" };
+      return { flag: "NO_CREDENTIAL", content: "未获取到 token 且无续期材料，请设置 TRAE_TOKEN，或配置 TRAE_REFRESH_TOKEN + TRAE_DEVICE_KEY_PEM + TRAE_DEVICE_PUB_PEM 以自动续期" +
+        "（可本机运行 python trae_checkin.py --export-keys --save 后用 scripts/setup-secrets.sh 推送）" };
     }
   } else if (canHeal(c) && expiringSoon(c)) {
     const [ok, msg] = await selfHeal(env, c, appVersion);
@@ -240,11 +246,14 @@ export async function run(env: Env): Promise<CheckinResult> {
       }
     } else {
       const m = sb?.message || sb?.msg || "未知错误";
-      return { flag: "AUTH_EXPIRED", content: `⚠️ 鉴权失败（HTTP ${sc}）：${m}` };
+      return { flag: "AUTH_EXPIRED", content: `⚠️ 鉴权失败（HTTP ${sc}）：${m}，请在 Trae 桌面端刷新登录态后用 scripts/setup-secrets.sh 更新变量` };
     }
   }
   if (!apiSucceeded(sb)) {
     const m = sb?.message || sb?.msg || JSON.stringify(sb).slice(0, 120);
+    if (isRateLimited(sc)) {
+      return { flag: "RATE_LIMITED", content: `⏳ 服务端限频/临时故障：${m}，建议错峰或稍后重试` };
+    }
     return { flag: "STATUS_ERR", content: `⚠️ 状态查询异常：HTTP ${sc} ${m}` };
   }
 
@@ -257,7 +266,7 @@ export async function run(env: Env): Promise<CheckinResult> {
       else return { flag: "AUTH_EXPIRED", content: `⚠️ 领取时鉴权失败（HTTP ${cc}）且自动续期失败：${msg}` };
     } else {
       const m = cb?.message || cb?.msg || "未知错误";
-      return { flag: "AUTH_EXPIRED", content: `⚠️ 领取时鉴权失败（HTTP ${cc}）：${m}` };
+      return { flag: "AUTH_EXPIRED", content: `⚠️ 领取时鉴权失败（HTTP ${cc}）：${m}，请在 Trae 桌面端刷新登录态后用 scripts/setup-secrets.sh 更新变量` };
     }
   }
   if (apiSucceeded(cb)) {
@@ -270,5 +279,8 @@ export async function run(env: Env): Promise<CheckinResult> {
     return { flag: "SUCCESS", content: `✅ ${gain}${extra}` };
   }
   const m = (cb as any)?.message || (cb as any)?.msg || JSON.stringify(cb).slice(0, 150);
+  if (isRateLimited(cc)) {
+    return { flag: "RATE_LIMITED", content: `⏳ 服务端限频/临时故障：${m}，建议错峰或稍后重试` };
+  }
   return { flag: "FAIL", content: `⚠️ 签到未成功：HTTP ${cc} ${m}` };
 }

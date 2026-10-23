@@ -3,7 +3,6 @@ import type { Env, CheckinResult } from "./types";
 import { run as workbuddyRun } from "./tasks/workbuddy";
 import { run as traeRun } from "./tasks/trae";
 import { run as minimaxRun } from "./tasks/minimax";
-import { run as meituanRun } from "./tasks/meituan";
 import { notifyServerJ } from "./lib/notify";
 
 interface TaskDef {
@@ -12,11 +11,11 @@ interface TaskDef {
   fn: (env: Env) => Promise<CheckinResult>;
 }
 
+// 顺序即执行顺序（对齐 py 版 checkin_all.py）：WorkBuddy -> Trae Work -> MiniMax Code
 const TASKS: TaskDef[] = [
   { name: "WorkBuddy", title: "WorkBuddy 每日签到", fn: workbuddyRun },
   { name: "Trae Work", title: "Trae Work 每日签到", fn: traeRun },
   { name: "MiniMax Code", title: "MiniMax Code 每日签到", fn: minimaxRun },
-  { name: "美团", title: "美团每日领券", fn: meituanRun },
 ];
 
 const FLAG_ICON: Record<string, string> = {
@@ -54,14 +53,9 @@ function buildSummary(results: [string, CheckinResult][]): string {
   return lines.join("\n");
 }
 
-async function runAll(env: Env, onlyMeituan = false): Promise<string> {
-  // 对齐 py 版：聚合签到 cron 只跑 WorkBuddy / Trae / MiniMax（不含美团）；
-  // 美团专用 cron 只跑美团。onlyMeituan 由 scheduled() 按 event.cron 决定。
-  const tasks = onlyMeituan
-    ? TASKS.filter((t) => t.name === "美团")
-    : TASKS.filter((t) => t.name !== "美团");
+async function runAll(env: Env): Promise<string> {
   const results: [string, CheckinResult][] = [];
-  for (const t of tasks) {
+  for (const t of TASKS) {
     try {
       const r = await t.fn(env);
       results.push([t.name, r]);
@@ -71,42 +65,32 @@ async function runAll(env: Env, onlyMeituan = false): Promise<string> {
       console.error(`[${t.name}] ERROR`, e);
     }
   }
-  const allOk = results.every(
-    ([, r]) => r.flag === "SUCCESS" || r.flag === "ALREADY_TODAY",
-  );
   const summary = buildSummary(results);
+  // 标题格式对齐 py 版：每日Token签到汇总✅{ok}/{total}
+  const ok = results.filter(([, r]) => r.flag === "SUCCESS" || r.flag === "ALREADY_TODAY").length;
   try {
-    await notifyServerJ(`每日Token签到汇总 ${allOk ? "✅" : "⚠️"}`, summary, env.NOTIFY_PUSH_KEY);
+    await notifyServerJ(`每日Token签到汇总✅${ok}/${results.length}`, summary, env.NOTIFY_PUSH_KEY);
   } catch (e) {
     console.warn("[notify] 通知失败", e);
   }
   return summary;
 }
 
-// 美团专用 cron（UTC，对应 py 版 meituan_checkin.py 的 55 10 * * * = 10:55 CST）。
-// wrangler.toml 里两条 cron 通过 event.cron 区分：命中此表达式则只跑美团，否则跑全部。
-const MEITUAN_CRON = "55 2 * * *";
-
 export default {
-  // 本地手动触发（仅开发期使用，不进生产逻辑分支）：
-  //   /?run=1               -> 跑聚合三项（WorkBuddy / Trae / MiniMax）
-  //   /?run=1&only=meituan  -> 仅跑美团
+  // 本地手动触发（仅开发期使用，不进生产逻辑分支）：/?run=1 -> 跑聚合三项
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (url.searchParams.get("run") !== "1") {
-      return new Response(
-        "本地手动触发请访问 /?run=1（聚合三项）或 /?run=1&only=meituan（仅美团）",
-        { status: 400, headers: { "content-type": "text/plain; charset=utf-8" } },
-      );
+      return new Response("本地手动触发请访问 /?run=1（聚合三项）", {
+        status: 400,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
     }
-    const onlyMeituan = url.searchParams.get("only") === "meituan";
-    const summary = await runAll(env, onlyMeituan);
+    const summary = await runAll(env);
     return new Response(summary, { headers: { "content-type": "text/plain; charset=utf-8" } });
   },
 
-  async scheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    // event.cron 为空（部分本地/旧运行时）时回落到跑全部
-    const onlyMeituan = event.cron === MEITUAN_CRON;
-    await runAll(env, onlyMeituan);
+  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+    await runAll(env);
   },
 };

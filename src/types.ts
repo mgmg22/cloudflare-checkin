@@ -4,6 +4,7 @@ export interface Env {
   // WorkBuddy
   WB_ACCESS_TOKEN: string;
   WB_USER_ID: string;
+  WB_DOMAIN?: string; // 可选：成长中心按产品路由（取自登录态 auth.domain，如 www.workbuddy.cn）
   // Trae Work
   TRAE_TOKEN?: string;
   TRAE_DEVICE_ID: string;
@@ -18,10 +19,6 @@ export interface Env {
   MINIMAX_USER_ID: string;
   MINIMAX_UUID?: string;
   MINIMAX_DEVICE_ID?: string;
-  // 美团
-  MT_TOKEN: string;
-  MT_CLIENT_ID?: string;
-  MT_AISCENE?: string;
   // 通知
   NOTIFY_PUSH_KEY?: string;
   // KV（wrangler.toml 绑定，可选；不配置则 token 不跨调用缓存）
