@@ -7,7 +7,7 @@
 
 | 任务 | 说明 |
 | --- | --- |
-| WorkBuddy | 每日签到 + 一次基础真实对话（SSE）+ 成长中心（派猫旅行/开盲盒），并汇总「总剩余积分」（对齐 py 版 `run_full` 全量流程） |
+| WorkBuddy | 每日签到 + 成长中心（派猫旅行/开盲盒），并汇总「总剩余积分」（对齐 py 版 `run_full` 全量流程） |
 | Trae Work | 每日积分签到，内置 ECDSA 设备私钥自动续期（对齐 `trae_checkin.py`） |
 | MiniMax Code | 每日积分签到，先续期再签到（对齐 `minimax_checkin.py`） |
 
@@ -134,8 +134,6 @@ bash scripts/setup-secrets.sh
 - **WebCrypto 限制**：Workers 运行时只有 `crypto.subtle`，无 MD5、且 ECDSA
   返回 IEEE P1363（raw `r||s`）而非 DER。本项目自带纯 TS 的 `md5.ts`（RFC1321），
   `crypto.ts` 把 P1363 拆成 `(r,s)`、做低 s 归一化后重编码成 DER（Trae 服务端按 DER 校验）。
-- **WorkBuddy 对话**：`/v2/chat/completions` 为 SSE 流式（必须 `stream:true`），读完整响应后拼接
-  `delta.content`；请求携带 `X-Product` / `X-IDE-*` 等产品标识头，控制台「使用端」列才能归属到 WorkBuddy。
 - **滚动凭据持久化**：Trae / MiniMax 续期后的 token 写进 KV 命名空间 `CHECKIN_STATE`
   （键 `trae` / `minimax`），替代原 Python 的本地缓存文件 `.trae_token.json` / `.minimax_token.json`。
   首跑 / KV 为空时依赖 `[vars]` 里的初始 `TRAE_REFRESH_TOKEN`，请填 py 续期缓存 `.trae_token.json`

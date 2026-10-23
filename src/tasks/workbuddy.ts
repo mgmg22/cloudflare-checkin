@@ -1,5 +1,5 @@
 /// WorkBuddy 每日签到任务：对齐 py 版 workbuddy_checkin.py 的 run_full 全量流程。
-/// 职责边界：每日签到 + 总剩余积分查询 + 一次基础真实对话（SSE）+ 成长中心（派猫旅行/开盲盒）。
+/// 职责边界：每日签到 + 总剩余积分查询 + 成长中心（派猫旅行/开盲盒）。
 /// 凭据只读 env（WB_ACCESS_TOKEN / WB_USER_ID，WB_DOMAIN 可选）；与 py 版一致，不做 token 续期。
 
 import type { CheckinResult, Env } from "../types";
@@ -25,12 +25,6 @@ const TRAVEL_CLAIM = `${GROWTH_BASE}/buddy/travel/claim`;
 const ENERGY = `${GROWTH_BASE}/energy`;
 const BLINDBOX_ENERGY_COST = 10;
 const BUDDY_OPEN = `${GROWTH_BASE}/buddy/open`;
-
-// 基础对话：固定模型 deepseek-v4.1-flash；必须 stream:true（SSE）。
-// 仅用于发起一次真实对话，与成长计划任务本体无关。
-const CHAT_PATH = "/v2/chat/completions";
-const CHAT_MODEL = "deepseek-v4.1-flash";
-const CHAT_CLIENT_VERSION = "5.3.8";
 
 function baseHeaders(token: string, uid: string): Record<string, string> {
   return {
@@ -203,68 +197,7 @@ async function runGrowth(token: string, uid: string, domain: string): Promise<st
   return parts.length ? parts.join("；") : "成长中心无可执行项";
 }
 
-/** 从 SSE 原始响应中拼接所有 delta.content（遇 [DONE] 即止，对齐 py _parse_sse_content）。 */
-function parseSseContent(raw: string): string {
-  const out: string[] = [];
-  for (const line0 of raw.split("\n")) {
-    const line = line0.trim();
-    if (!line.startsWith("data:")) continue;
-    const payload = line.slice(5).trim();
-    if (payload === "[DONE]") break;
-    try {
-      const obj = JSON.parse(payload);
-      const c = obj?.choices?.[0]?.delta?.content;
-      if (c) out.push(c);
-    } catch {
-      // 非 JSON 行忽略
-    }
-  }
-  return out.join("");
-}
-
-/** 发起一次最基础的真实对话（固定模型 deepseek-v4.1-flash，SSE 流式，对齐 py chat_once）。
- *  产品标识头决定控制台「使用端」列的归属，缺失会显示「-」。 */
-async function chatOnce(token: string, uid: string): Promise<string> {
-  const body = {
-    model: CHAT_MODEL,
-    messages: [{ role: "user", content: "你好" }],
-    stream: true,
-  };
-  const headers = {
-    ...baseHeaders(token, uid),
-    Accept: "text/event-stream",
-    "X-Product": "WorkBuddy",
-    "X-IDE-Name": "WorkBuddy",
-    "X-IDE-Type": "WorkBuddy",
-    "X-IDE-Version": CHAT_CLIENT_VERSION,
-    "X-Product-Version": CHAT_CLIENT_VERSION,
-    "X-Domain": "www.workbuddy.cn",
-    "User-Agent": `WorkBuddyIDE/${CHAT_CLIENT_VERSION} WorkBuddy/${CHAT_CLIENT_VERSION}`,
-  };
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 60000);
-  try {
-    const res = await fetch(API_BASE + CHAT_PATH, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-    if (res.status !== 200) {
-      const txt = await res.text().catch(() => "");
-      return `对话请求失败（HTTP ${res.status}）：${txt.slice(0, 120)}`;
-    }
-    const text = parseSseContent(await res.text());
-    if (!text) return "对话已发送，但未解析到回复内容";
-    return "已发起对话";
-  } catch (e: any) {
-    return `对话请求异常：${String(e?.message || e).slice(0, 160)}`;
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-/** 完整运行（对齐 py run_full）：每日签到 + 基础真实对话 + 成长中心。
+/** 完整运行（对齐 py run_full）：每日签到 + 成长中心。
  *  与单独跑 py 版、checkin_all 聚合均保持同一全量流程。 */
 export async function run(env: Env): Promise<CheckinResult> {
   const token = (env.WB_ACCESS_TOKEN || "").trim();
@@ -280,8 +213,6 @@ export async function run(env: Env): Promise<CheckinResult> {
 
   const { flag, content: checkinContent } = await checkinOnce(token, uid, domain);
   let content = checkinContent;
-  const chat = await chatOnce(token, uid);
-  content += `\n${chat}`;
   const growth = await runGrowth(token, uid, domain);
   content += `\n${growth}`;
   return { flag, content };
