@@ -2,9 +2,9 @@ name = "qinglong-checkin"
 main = "src/index.ts"
 compatibility_date = "2024-11-01"
 
-# UTC 时间：00:08 CST 聚合签到（WorkBuddy/Trae/MiniMax），10:55 仅美团
+# UTC 16:08 = 北京时间 00:08 聚合签到（WorkBuddy/Trae/MiniMax，对齐 py checkin_all.py）
 [triggers]
-crons = ["8 16 * * *", "55 2 * * *"]
+crons = ["8 16 * * *"]
 
 # 持久化 KV（Trae / MiniMax 续期后的滚动 token）：默认关闭，方便一键部署直接跑起来。
 # 要开启持久化：Workers & Pages → KV → 新建命名空间，复制 id 填到下面并取消注释即可。
