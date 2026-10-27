@@ -6,21 +6,63 @@
   "type": "module",
   "cloudflare": {
     "bindings": {
-      "WB_ACCESS_TOKEN": { "description": "WorkBuddy 访问令牌（本机 .env 的 WB_ACCESS_TOKEN）" },
-      "WB_USER_ID": { "description": "WorkBuddy 用户 ID" },
-      "WB_DOMAIN": { "description": "WorkBuddy 产品域（可选，成长中心按产品路由）" },
-      "TRAE_TOKEN": { "description": "Trae 登录令牌（可选，留空则用刷新 token 登录）" },
-      "TRAE_DEVICE_ID": { "description": "Trae 设备 ID" },
-      "TRAE_USER_ID": { "description": "Trae 用户 ID（可选）" },
-      "TRAE_REFRESH_TOKEN": { "description": "Trae 刷新令牌" },
-      "TRAE_DEVICE_KEY_PEM": { "description": "Trae 设备私钥 base64(PEM) 单行" },
-      "TRAE_DEVICE_PUB_PEM": { "description": "Trae 设备公钥 base64(PEM) 单行" },
-      "TRAE_MACHINE_ID": { "description": "Trae 机器 ID（可选）" },
-      "MINIMAX_TOKEN": { "description": "MiniMax 登录令牌" },
-      "MINIMAX_USER_ID": { "description": "MiniMax 用户 ID" },
-      "MINIMAX_UUID": { "description": "MiniMax 设备 UUID（可选）" },
-      "MINIMAX_DEVICE_ID": { "description": "MiniMax 设备 ID（可选）" },
-      "NOTIFY_PUSH_KEY": { "description": "server酱 PUSH_KEY_MY（通知用，可选）" }
+      "WB_ACCESS_TOKEN": {
+        "description": "WorkBuddy 访问令牌（本机 .env 的 WB_ACCESS_TOKEN）"
+      },
+      "WB_USER_ID": {
+        "description": "WorkBuddy 用户 ID"
+      },
+      "WB_DOMAIN": {
+        "description": "WorkBuddy 产品域（可选，成长中心按产品路由）"
+      },
+      "TRAE_TOKEN": {
+        "description": "Trae 登录令牌（可选，留空则用刷新 token 登录）"
+      },
+      "TRAE_DEVICE_ID": {
+        "description": "Trae 设备 ID"
+      },
+      "TRAE_USER_ID": {
+        "description": "Trae 用户 ID（可选）"
+      },
+      "TRAE_REFRESH_TOKEN": {
+        "description": "Trae 刷新令牌"
+      },
+      "TRAE_DEVICE_KEY_PEM": {
+        "description": "Trae 设备私钥 base64(PEM) 单行"
+      },
+      "TRAE_DEVICE_PUB_PEM": {
+        "description": "Trae 设备公钥 base64(PEM) 单行"
+      },
+      "TRAE_MACHINE_ID": {
+        "description": "Trae 机器 ID（可选）"
+      },
+      "MINIMAX_TOKEN": {
+        "description": "MiniMax 登录令牌"
+      },
+      "MINIMAX_USER_ID": {
+        "description": "MiniMax 用户 ID"
+      },
+      "MINIMAX_UUID": {
+        "description": "MiniMax 设备 UUID（可选）"
+      },
+      "MINIMAX_DEVICE_ID": {
+        "description": "MiniMax 设备 ID（可选）"
+      },
+      "API_KEY": {
+        "description": "XB 线报 AI 分析用 OpenAI 兼容接口密钥"
+      },
+      "API_URL": {
+        "description": "XB 线报 AI 分析用接口地址（含 /chat/completions）"
+      },
+      "XB_BOT_TOKEN": {
+        "description": "XB 线报钉钉机器人 access_token"
+      },
+      "XB_BOT_TOKEN_SECRET": {
+        "description": "XB 线报钉钉机器人加签密钥（可选）"
+      },
+      "NOTIFY_PUSH_KEY": {
+        "description": "server酱 PUSH_KEY_MY（通知用，可选）"
+      }
     }
   },
   "scripts": {
@@ -31,8 +73,8 @@
     "test:crypto": "node --experimental-strip-types scripts/test-crypto.ts"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260702.1",
+    "@cloudflare/workers-types": "^5.20261027.1",
     "typescript": "^5.5.0",
-    "wrangler": "^3.78.0"
+    "wrangler": "^4.153.0"
   }
 }

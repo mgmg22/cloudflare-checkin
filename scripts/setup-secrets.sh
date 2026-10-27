@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler vars set 到 Cloudflare（文本变量，全量 15 项，不加密）。
+# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler secret put 到 Cloudflare（全量 19 项，加密存储）。
+# 说明：wrangler v4 已移除 vars 命令，明文文本变量改为 secret；Worker 内 env.X 读取方式不变。
 # 用法： bash scripts/setup-secrets.sh [本机 .env 路径]
-# 前置：npm install && npx wrangler login（已在本机登录 Cloudflare）
+# 前置：npx wrangler deploy（Worker 已存在）&& npx wrangler login（已在本机登录 Cloudflare）
 set -euo pipefail
 
 SRC_ENV="${1:-/e/QinglongMy/.env}"
@@ -36,8 +37,8 @@ put() {
     echo "跳过 $name（源 .env 无值）"
     return
   fi
-  echo ">> wrangler vars set $name"
-  printf '%s' "$val" | npx wrangler vars set "$name"
+  echo ">> wrangler secret put $name"
+  printf '%s' "$val" | npx wrangler secret put "$name" >/dev/null 2>&1 && echo "   OK" || echo "   失败（重试或手动到控制台录入）"
 }
 
 # ---- WorkBuddy ----
@@ -61,6 +62,11 @@ put MINIMAX_UUID "$(get MINIMAX_UUID)"
 put MINIMAX_DEVICE_ID "$(get MINIMAX_DEVICE_ID)"
 # ---- 通知（server酱 PUSH_KEY_MY）----
 put NOTIFY_PUSH_KEY "$(get PUSH_KEY_MY)"
+# ---- XB 线报（AI 分析 + 钉钉机器人）----
+put API_KEY "$(get API_KEY)"
+put API_URL "$(get API_URL)"
+put XB_BOT_TOKEN "$(get XB_BOT_TOKEN)"
+put XB_BOT_TOKEN_SECRET "$(get XB_BOT_TOKEN_SECRET)"
 
 echo ""
 echo "完成。"
