@@ -3,50 +3,52 @@
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
 把 `E:\QinglongMy` 的 Python 签到脚本重写成 **TypeScript + Cloudflare Workers**，
-由 **Cron Triggers** 定时触发，无需常驻服务器。覆盖三个任务：
+由 **Cron Triggers** 定时触发，无需常驻服务器。覆盖四个任务：
 
 | 任务 | 说明 |
 | --- | --- |
 | WorkBuddy | 每日签到 + 成长中心（派猫旅行/开盲盒），并汇总「总剩余积分」（对齐 py 版 `run_full` 全量流程） |
 | Trae Work | 每日积分签到，内置 ECDSA 设备私钥自动续期（对齐 `trae_checkin.py`） |
 | MiniMax Code | 每日积分签到，先续期再签到（对齐 `minimax_checkin.py`） |
+| XB 线报 | 抓 0818tuan 线报 → 黑白名单过滤 → KV 去重 → AI 评分 → 钉钉推 markdown（对齐 `xb.py`） |
 
-> 不含原仓库的抓取类脚本（douban / job / stock / weibo / xb 等），只迁移签到自动化。
+> 不含原仓库其余抓取类脚本（douban / job / stock / weibo 等）。
 
-## 定时（单条 Cron，对齐 py 版时间）
+## 定时（两条 Cron，对齐 py 版时间）
 
 时间均为**北京时间 UTC+8**，Cloudflare Cron 表达式用 **UTC** 写：
 
 | Cron（UTC） | 北京时间 | 跑什么 | 对齐的 py 脚本 |
 | --- | --- | --- | --- |
 | `8 16 * * *` | 00:08 CST | WorkBuddy / Trae / MiniMax（聚合三项，合并结果只发一次推送） | `checkin_all.py` |
+| `3,33 0-15 * * *` | 8~23 点每小时的 03/33 分 | XB 线报抓取 + AI 评分 + 钉钉推送 | `xb.py`（`3/30 8/1 * * *`） |
 
 ## 目录结构
 
 ```
 cloudflare-checkin/
-├─ wrangler.toml          # Worker 配置 + 单条 cron + KV 绑定（注释）；变量不写死在 [vars]，改由控制台 / setup-secrets.sh 注入
+├─ wrangler.toml          # Worker 配置 + 两条 cron + KV 绑定（注释）；变量不写死在 [vars]，改由控制台 / setup-secrets.sh 注入
 ├─ package.json
 ├─ tsconfig.json
 ├─ src/
-│  ├─ index.ts            # 编排：scheduled() 定时触发 / fetch() 手动触发（/?run=1）
+│  ├─ index.ts            # 编排：scheduled() 按两条 cron 分发 / fetch() 手动触发（/?run=1、/?run=xb[&dry=1]）
 │  ├─ types.ts            # Env / CheckinResult 类型
-│  ├─ tasks/              # workbuddy / trae / minimax 三个任务
+│  ├─ tasks/              # workbuddy / trae / minimax / xb 四个任务
 │  └─ lib/                # http / crypto / md5 / notify 公共库
 └─ scripts/
-   ├─ setup-secrets.sh    # 推送文本变量到 Cloudflare（15 项，不加密）；Trae 的 token/refresh_token 优先取 py 续期缓存 .trae_token.json
+   ├─ setup-secrets.sh    # 推送变量到 Cloudflare（19 项，wrangler secret put 加密存储）；Trae 的 token/refresh_token 优先取 py 续期缓存 .trae_token.json
    └─ test-crypto.ts      # MD5 / ECDSA 加密单测
 ```
 
-## 环境变量（文本变量，不加密）
+## 环境变量（Secret，加密存储）
 
 **不再写进 `wrangler.toml` 的 `[vars]` 块**（否则 `wrangler deploy` 会把控制台已填好的真实值清空成空）。
-统一为 **Cloudflare 文本变量（明文，不加密）**，首次设置任选其一，之后长期有效、不被部署覆盖：
+统一为 **Cloudflare Secrets（加密存储；wrangler v4 已移除 vars 命令）**，Worker 内 `env.X` 读取方式不变，首次设置任选其一，之后长期有效、不被部署覆盖：
 
-- 跑 `bash scripts/setup-secrets.sh` 把本机 `.env` 的 15 项一键推送（Trae 的 token/refresh 优先取 py 续期缓存 `.trae_token.json`）；
-- 或在 Cloudflare 控制台「Workers & Pages → 你的 Worker → Settings → Variables」逐项录入，**不勾选「加密」**。
+- 跑 `bash scripts/setup-secrets.sh` 把本机 `.env` 的 19 项一键推送（Trae 的 token/refresh 优先取 py 续期缓存 `.trae_token.json`）；
+- 或在 Cloudflare 控制台「Workers & Pages → 你的 Worker → Settings → Variables and Secrets」逐项录入（类型选 Secret）。
 
-手动覆盖同样用 `wrangler vars set` / 控制台录入，均不进仓库。
+手动覆盖同样用 `wrangler secret put`（前提：Worker 已部署）或控制台录入，均不进仓库。
 
 清单与 `src/types.ts` 的 `Env` 一一对应：
 
@@ -54,6 +56,7 @@ cloudflare-checkin/
 - Trae：`TRAE_TOKEN` / `TRAE_DEVICE_ID` / `TRAE_USER_ID` / `TRAE_REFRESH_TOKEN` /
   `TRAE_DEVICE_KEY_PEM` / `TRAE_DEVICE_PUB_PEM` / `TRAE_MACHINE_ID`（可选）
 - MiniMax：`MINIMAX_TOKEN` / `MINIMAX_USER_ID` / `MINIMAX_UUID`（可选）/ `MINIMAX_DEVICE_ID`（可选）
+- XB 线报：`API_KEY` / `API_URL`（AI 分析）、`XB_BOT_TOKEN` / `XB_BOT_TOKEN_SECRET`（可选，钉钉加签）
 - 通知：`NOTIFY_PUSH_KEY`（server酱，对应本机 `.env` 的 `PUSH_KEY_MY`）
 
 > `TRAE_APP_VERSION` 内置默认 `1.107.1`，无需配置（未列入 `[vars]`）。
@@ -66,7 +69,7 @@ npm install
 # （PUSH_KEY_MY 需改名为 NOTIFY_PUSH_KEY）。setup-secrets.sh 走 `wrangler vars set` 写入云端 Worker 变量，仅用于部署，不生成本地 .dev.vars
 npm run test:crypto               # 跑加密单测（MD5 向量 + ECDSA 往返）
 npm run typecheck                 # tsc --noEmit
-npm run dev                       # wrangler dev 本地起服务，浏览器访问 /?run=1 手动触发
+npm run dev                       # wrangler dev 本地起服务，浏览器访问 /?run=1（聚合签到）、/?run=xb&dry=1（线报 dry 验证，不推钉钉不写 KV）
 ```
 
 ## 部署（需要你自己的 Cloudflare 账号，AI 无法代为登录）
@@ -100,10 +103,9 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 
 > 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin`，无需手填。
 > 由于变量已不在 `[vars]`，向导**不再预生成变量表单**——部署完成后，运行 `bash scripts/setup-secrets.sh`
-> （或去控制台 Variables 手动录入，均不加密）把 15 项文本变量推上去即可。
-> KV 持久化默认关闭（已在 `wrangler.toml` 注释掉），所以一键部署可直接跑通，无需先建 KV。
-> 想让 Trae / MiniMax 的续期 token 跨调用缓存：Workers & Pages → KV → 新建命名空间，
-> 复制 id 填回 `wrangler.toml` 的 `CHECKIN_STATE.id` 并取消注释对应行即可。
+> （或去控制台 Secrets 手动录入，加密存储）把 19 项变量推上去即可。
+> KV 已启用：命名空间 `CHECKIN_STATE`（Trae/MiniMax 滚动 token 缓存 + XB 线报 id 去重），id 见 `wrangler.toml`。
+> 若换账号重新部署：Workers & Pages → KV → 新建命名空间，把新 id 填回 `wrangler.toml` 并取消注释即可。
 
 ### 手动部署（完整控制）
 
@@ -119,7 +121,7 @@ npx wrangler kv namespace create CHECKIN_STATE
 # 3) 部署（先部署，文本变量绑定才能落库）
 npx wrangler deploy
 
-# 4) 推送文本变量到 Cloudflare（15 项，不加密）。Trae 的 token / refresh_token
+# 4) 推送文本变量到 Cloudflare（19 项，不加密）。Trae 的 token / refresh_token
 #    优先取自 py 续期缓存 .trae_token.json（避免 .env 里的旧快照失效）。
 #    用法：bash scripts/setup-secrets.sh [本机 .env 路径] [缓存 json 路径]
 bash scripts/setup-secrets.sh
