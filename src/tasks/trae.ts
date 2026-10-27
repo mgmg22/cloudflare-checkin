@@ -29,8 +29,9 @@ function readCred(env: Env): TraeCred {
     device_id: (env.TRAE_DEVICE_ID || "").trim(),
     user_id: (env.TRAE_USER_ID || "").trim(),
     refresh_token: (env.TRAE_REFRESH_TOKEN || "").trim(),
-    device_key_pem: (env.TRAE_DEVICE_KEY_PEM || "").trim(),
-    device_pub_pem: (env.TRAE_DEVICE_PUB_PEM || "").trim(),
+    // PEM 兼容两种来源：KV/secret 里的真 PEM，或 .env 导出的 base64(PEM) 单行（读取侧还原，对齐 py _repair_pem）
+    device_key_pem: resolvePem((env.TRAE_DEVICE_KEY_PEM || "").trim(), "PRIVATE"),
+    device_pub_pem: resolvePem((env.TRAE_DEVICE_PUB_PEM || "").trim(), "PUBLIC"),
     machine_id: (env.TRAE_MACHINE_ID || "").trim(),
     expires_ms: 0,
     refresh_expires_ms: 0,

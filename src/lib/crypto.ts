@@ -25,17 +25,19 @@ function decodeB64ToString(b64: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-/** 还原私钥 PEM 文本：已是 PEM 则原样；否则当 base64(PEM) 解码；再不行当裸 DER 补头尾。 */
-export function resolvePem(raw: string): string {
+/** 还原 PEM 文本：已是 PEM 则原样；否则当 base64(PEM) 解码；再不行当裸 DER 补头尾。 */
+export function resolvePem(raw: string, keyType: "PRIVATE" | "PUBLIC" = "PRIVATE"): string {
   const s = (raw || "").trim();
   if (!s) return "";
   if (s.includes("-----BEGIN")) return s;
+  const head = `-----BEGIN ${keyType} KEY-----`;
+  const tail = `-----END ${keyType} KEY-----`;
   try {
     const txt = decodeB64ToString(s);
     if (txt.includes("-----BEGIN")) return txt;
-    return `-----BEGIN PRIVATE KEY-----\n${s}\n-----END PRIVATE KEY-----`;
+    return `${head}\n${s}\n${tail}`;
   } catch {
-    return `-----BEGIN PRIVATE KEY-----\n${s}\n-----END PRIVATE KEY-----`;
+    return `${head}\n${s}\n${tail}`;
   }
 }
 
