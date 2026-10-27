@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# 从本机 E:/QinglongMy/.env 读取变量，逐个 wrangler secret put 到 Cloudflare（全量 19 项，加密存储）。
+# 从青龙脚本库 QinglongMy 的 .env 读取变量，逐个 wrangler secret put 到 Cloudflare（全量 19 项，加密存储）。
 # 说明：wrangler v4 已移除 vars 命令，明文文本变量改为 secret；Worker 内 env.X 读取方式不变。
-# 用法： bash scripts/setup-secrets.sh [本机 .env 路径]
+# 用法： bash scripts/setup-secrets.sh <QinglongMy/.env 路径> [py 续期缓存 .trae_token.json 路径]
 # 前置：npx wrangler deploy（Worker 已存在）&& npx wrangler login（已在本机登录 Cloudflare）
 set -euo pipefail
 
-SRC_ENV="${1:-/e/QinglongMy/.env}"
+SRC_ENV="${1:?用法: bash scripts/setup-secrets.sh <QinglongMy/.env 路径> [py 续期缓存 .trae_token.json 路径]}"
 # py 版每次成功续期都会把最新的 token / refresh_token 写进同目录 .trae_token.json
 # （见 py 的 self_heal -> save_cache）。部署时优先用这里的新鲜值，
 # 避免拿到 .env 里那份过期的 refresh token（这正是本地与 py 表现不一致的根因）。
-CACHE_JSON="${2:-/e/QinglongMy/.trae_token.json}"
+CACHE_JSON="${2:-}"
 cd "$(dirname "$0")/.."
 
 # 从 py 的续期缓存读取最新凭据（key 为 json 字段名，如 token / refresh_token）

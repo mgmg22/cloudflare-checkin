@@ -216,7 +216,7 @@ export async function run(env: Env): Promise<CheckinResult> {
       if (!ok) return { flag: "NO_CREDENTIAL", content: `⚠️ ${msg}` };
     } else {
       return { flag: "NO_CREDENTIAL", content: "未获取到 token 且无续期材料，请设置 TRAE_TOKEN，或配置 TRAE_REFRESH_TOKEN + TRAE_DEVICE_KEY_PEM + TRAE_DEVICE_PUB_PEM 以自动续期" +
-        "（可本机运行 python trae_checkin.py --export-keys --save 后用 scripts/setup-secrets.sh 推送）" };
+        "（可在装有 Trae 桌面端且已登录的电脑上运行 python trae_checkin.py --export-keys --save 后，用 scripts/setup-secrets.sh 推送）" };
     }
   } else if (canHeal(c) && expiringSoon(c)) {
     const [ok, msg] = await selfHeal(env, c, appVersion);

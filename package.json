@@ -7,7 +7,7 @@
   "cloudflare": {
     "bindings": {
       "WB_ACCESS_TOKEN": {
-        "description": "WorkBuddy 访问令牌（本机 .env 的 WB_ACCESS_TOKEN）"
+        "description": "WorkBuddy 访问令牌（青龙 .env 的 WB_ACCESS_TOKEN）"
       },
       "WB_USER_ID": {
         "description": "WorkBuddy 用户 ID"

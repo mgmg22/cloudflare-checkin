@@ -206,7 +206,7 @@ export async function run(env: Env): Promise<CheckinResult> {
     return {
       flag: "NO_CREDENTIAL",
       content: "未获取到 WorkBuddy 登录态，请设置 WB_ACCESS_TOKEN / WB_USER_ID" +
-        "（或本机运行 python workbuddy_checkin.py --export-env --save 刷新）",
+        "（或在装有 WorkBuddy 桌面端且已登录的电脑上运行 python workbuddy_checkin.py --export-env --save 刷新）",
     };
   }
   const domain = (env.WB_DOMAIN || "").trim();

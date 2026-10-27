@@ -304,7 +304,7 @@ export async function run(env: Env): Promise<CheckinResult> {
     last = {
       flag: last.flag,
       content: last.content +
-        "｜处理：①本机 python minimax_checkin.py --export-env --save 重新导出；" +
+        "｜处理：①在装有 MiniMax 桌面端且已登录的电脑上运行 python minimax_checkin.py --export-env --save 重新导出；" +
         "②把新的 MINIMAX_TOKEN 更新到 Worker 变量（注意别带引号）；" +
         "③若确认 token 无误仍 401，多为出口 IP 被风控",
     };
