@@ -139,7 +139,7 @@ async function fetchListItems(): Promise<ListItem[]> {
       return [];
     }
   } catch (e) {
-    // 生产环境从 CF 边缘访问 http:// 站点可能被重置，本地 dev 却正常——必须兜底而不是裸抛 500
+    // CF 边缘访问 http:// 站点可能被重置，抓取失败返回空列表（不裸抛，避免无信息 500）
     console.warn("[xb] 列表页抓取失败:", e instanceof Error ? e.message : e);
     return [];
   }

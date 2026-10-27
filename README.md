@@ -27,7 +27,7 @@
 
 ```
 cloudflare-checkin/
-├─ wrangler.toml          # Worker 配置 + 两条 cron + KV 绑定（注释）；变量不写死在 [vars]，改由控制台 / setup-secrets.sh 注入
+├─ wrangler.toml          # Worker 配置 + 两条 cron + KV 绑定（注释）；变量不写在 [vars]（部署会清空），由 setup-secrets.sh / 控制台注入
 ├─ package.json
 ├─ tsconfig.json
 ├─ src/
@@ -36,16 +36,16 @@ cloudflare-checkin/
 │  ├─ tasks/              # workbuddy / trae / minimax / xb 四个任务
 │  └─ lib/                # http / crypto / md5 / notify 公共库
 └─ scripts/
-   ├─ setup-secrets.sh    # 推送变量到 Cloudflare（19 项，wrangler secret put 加密存储）；Trae 的 token/refresh_token 优先取 py 续期缓存 .trae_token.json
+   ├─ setup-secrets.sh    # 推送变量到 Cloudflare（wrangler secret put 加密存储）；Trae 的 token/refresh_token 优先取 py 续期缓存 .trae_token.json
    └─ test-crypto.ts      # MD5 / ECDSA 加密单测
 ```
 
 ## 环境变量（Secret，加密存储）
 
-**不再写进 `wrangler.toml` 的 `[vars]` 块**（否则 `wrangler deploy` 会把控制台已填好的真实值清空成空）。
-统一为 **Cloudflare Secrets（加密存储；wrangler v4 已移除 vars 命令）**，Worker 内 `env.X` 读取方式不变，首次设置任选其一，之后长期有效、不被部署覆盖：
+**不要写进 `wrangler.toml` 的 `[vars]` 块**（否则 `wrangler deploy` 会把控制台已填好的真实值清空）。
+统一为 **Cloudflare Secrets（加密存储，`wrangler secret put` / 控制台录入）**，Worker 内 `env.X` 读取方式不变，首次设置任选其一，之后长期有效、不被部署覆盖：
 
-- 跑 `bash scripts/setup-secrets.sh <青龙 .env 路径> [py 续期缓存 .trae_token.json 路径]` 把 19 项一键推送
+- 跑 `bash scripts/setup-secrets.sh <青龙 .env 路径> [py 续期缓存 .trae_token.json 路径]` 一键推送全部变量
   （Trae 的 token/refresh 优先取 py 续期缓存 `.trae_token.json` 的新鲜值）；
 - 或在 Cloudflare 控制台「Workers & Pages → 你的 Worker → Settings → Variables and Secrets」逐项录入（类型选 Secret）。
 
@@ -85,7 +85,7 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 2. **Connect** → 选 GitHub → 选**原始仓库 `mgmg22/cloudflare-checkin`** → 分支 `main`；
 3. 构建配置：Build command 留空（纯 Worker 无需构建）、Deploy command 默认 `npx wrangler deploy`、Root directory 留空（仓库根）。
 
-> ⚠️ 一定连**原始仓库**。用「一键部署」按钮时 Cloudflare 会 fork 一份副本并对接副本，导致 push 原仓库永远不更新——这正是"push 不生效"的根因。
+> ⚠️ 一定连**原始仓库**：「一键部署」按钮会 fork 一份副本并对接副本，之后 push 原仓库不会触发部署。
 
 因为是纯代码部署、`wrangler.toml` 不含 `[vars]`，**部署不会清空你在控制台填好的变量**，每次 push 只是更新代码。变量首次用 `setup-secrets.sh` 或手动录入后长期有效。
 
@@ -103,10 +103,10 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
 > 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin`，无需手填。
-> 由于变量已不在 `[vars]`，向导**不再预生成变量表单**——部署完成后，运行 `bash scripts/setup-secrets.sh`
-> （或去控制台 Secrets 手动录入，加密存储）把 19 项变量推上去即可。
-> KV 已启用：命名空间 `CHECKIN_STATE`（Trae/MiniMax 滚动 token 缓存 + XB 线报 id 去重），id 见 `wrangler.toml`。
-> 若换账号重新部署：Workers & Pages → KV → 新建命名空间，把新 id 填回 `wrangler.toml` 并取消注释即可。
+> 由于变量不在 `[vars]`，向导**不预生成变量表单**——部署完成后，运行 `bash scripts/setup-secrets.sh`
+> （或去控制台 Secrets 手动录入）推送全部变量（清单见上）即可。
+> KV 绑定默认启用（`CHECKIN_STATE`，Trae/MiniMax 滚动 token 缓存 + XB 线报 id 去重）；换账号时
+> `wrangler kv namespace create CHECKIN_STATE` 后把新 id 填回 `wrangler.toml`。
 
 ### 手动部署（完整控制）
 
@@ -116,14 +116,14 @@ cd cloudflare-checkin
 # 1) 登录 Cloudflare（浏览器授权）
 npx wrangler login
 
-# 2) （可选）建 KV 命名空间做 token 持久化；不做也能跑。要做就把 id 填进 wrangler.toml 的 CHECKIN_STATE.id 并取消注释
+# 2) KV 命名空间：wrangler.toml 已含默认绑定，账号一致可跳过；换账号时执行本命令并把新 id 填回
 npx wrangler kv namespace create CHECKIN_STATE
 
 # 3) 部署（先部署，变量 secret 绑定才能落库）
 npx wrangler deploy
 
-# 4) 推送 19 项变量到 Cloudflare（wrangler secret put，加密存储）。Trae 的 token / refresh_token
-#    优先取自 py 续期缓存 .trae_token.json（避免 .env 里的旧快照失效）。
+# 4) 推送全部变量（wrangler secret put，加密存储）。Trae 的 token / refresh_token 优先取
+#    py 续期缓存 .trae_token.json（.env 里多为过期快照）。
 #    用法：bash scripts/setup-secrets.sh <QinglongMy/.env 路径> [py续期缓存 .trae_token.json 路径]
 bash scripts/setup-secrets.sh ~/QinglongMy/.env ~/QinglongMy/.trae_token.json
 ```
@@ -139,7 +139,7 @@ bash scripts/setup-secrets.sh ~/QinglongMy/.env ~/QinglongMy/.trae_token.json
   `crypto.ts` 把 P1363 拆成 `(r,s)`、做低 s 归一化后重编码成 DER（Trae 服务端按 DER 校验）。
 - **滚动凭据持久化**：Trae / MiniMax 续期后的 token 写进 KV 命名空间 `CHECKIN_STATE`
   （键 `trae` / `minimax`），替代原 Python 的本地缓存文件 `.trae_token.json` / `.minimax_token.json`。
-  首跑 / KV 为空时依赖 `[vars]` 里的初始 `TRAE_REFRESH_TOKEN`，请填 py 续期缓存 `.trae_token.json`
-  中的新鲜值（而非 `.env` 快照）——`scripts/setup-secrets.sh` 已默认这样取，正是本地与 py 表现一致的关键。
+  首跑 / KV 为空时依赖 secrets 里的初始 `TRAE_REFRESH_TOKEN`，请填 py 续期缓存 `.trae_token.json`
+  中的新鲜值（`.env` 里多为过期快照）——`scripts/setup-secrets.sh` 已按此优先级取值。
 - **免费版注意**：单次 10ms CPU、账号最多 5 个 cron、50 子请求/次、KV 已含；
   Cron 失败自动重试（可 `controller.noRetry()` 关闭）、无内置告警。本流程是几次顺序 HTTPS + 一次 WebCrypto 签名，通常在 10ms CPU 内。
