@@ -7,8 +7,8 @@ compatibility_date = "2024-11-01"
 [triggers]
 crons = ["8 16 * * *", "3,33 0-15 * * *"]
 
-# 持久化 KV：1) Trae / MiniMax 续期后的滚动 token；2) XB 线报已推送 id 去重（不开启则线报会重复推送）。
-# id 为 KV 命名空间的资源标识符（非密钥，泄露无法访问数据）；换账号时用 `wrangler kv namespace create` 重建后替换。
+# KV 用途：Trae/MiniMax 滚动 token 缓存、XB 已推送线报 id 去重（关闭则线报重复推送）。
+# 换账号：wrangler kv namespace create CHECKIN_STATE 后替换 id。
 [[kv_namespaces]]
 binding = "CHECKIN_STATE"
 id = "75263d2880aa454d9b63357e119812c6"
