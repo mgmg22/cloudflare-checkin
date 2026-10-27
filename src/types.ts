@@ -19,6 +19,11 @@ export interface Env {
   MINIMAX_USER_ID: string;
   MINIMAX_UUID?: string;
   MINIMAX_DEVICE_ID?: string;
+  // XB 线报（AI 分析 + 钉钉推送）
+  API_KEY: string; // OpenAI 兼容接口密钥（取自本机 .env 的 API_KEY）
+  API_URL: string; // OpenAI 兼容接口地址（含 /chat/completions）
+  XB_BOT_TOKEN?: string; // 线报钉钉机器人 access_token
+  XB_BOT_TOKEN_SECRET?: string; // 可选：钉钉机器人加签密钥（SEC 开头）
   // 通知
   NOTIFY_PUSH_KEY?: string;
   // KV（wrangler.toml 绑定，可选；不配置则 token 不跨调用缓存）

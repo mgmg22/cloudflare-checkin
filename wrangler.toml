@@ -3,12 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2024-11-01"
 
 # UTC 16:08 = 北京时间 00:08 聚合签到（WorkBuddy/Trae/MiniMax，对齐 py checkin_all.py）
+# UTC 0-15 点的 3/33 分 = 北京时间 8~23 点每小时的 03/33 分 XB 线报推送（对齐 py xb.py 的 3/30 8/1 * * *）
 [triggers]
-crons = ["8 16 * * *"]
+crons = ["8 16 * * *", "3,33 0-15 * * *"]
 
-# 持久化 KV（Trae / MiniMax 续期后的滚动 token）：默认关闭，方便一键部署直接跑起来。
-# 要开启持久化：Workers & Pages → KV → 新建命名空间，复制 id 填到下面并取消注释即可。
-# 不配置也能正常签到，只是 token 不跨调用缓存（每次用刷新 token 重新登录）。
-# [[kv_namespaces]]
-# binding = "CHECKIN_STATE"
-# id = "REPLACE_WITH_YOUR_KV_ID"
+# 持久化 KV：1) Trae / MiniMax 续期后的滚动 token；2) XB 线报已推送 id 去重（不开启则线报会重复推送）。
+# 命名空间 CHECKIN_STATE 已于 2026-10-27 创建（账号 Administrator）。
+[[kv_namespaces]]
+binding = "CHECKIN_STATE"
+id = "75263d2880aa454d9b63357e119812c6"
