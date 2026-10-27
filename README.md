@@ -79,7 +79,7 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 
 在 Cloudflare 控制台把 Worker 连到本仓库，push 到 `main` 自动构建部署。**GitHub 侧无需配置任何 secret**：仓库读取走 Cloudflare GitHub App 的 OAuth 授权，部署用 API token 由 Cloudflare 自动生成并保存在 CF 侧。
 
-连接步骤（Workers & Pages → `qinglong-checkin` → Settings → Builds）：
+连接步骤（Workers & Pages → `qinglong-checkin1` → Settings → Builds）：
 
 1. 若之前连过别的仓库（如一键部署 fork 出的副本），先 **Disconnect**；
 2. **Connect** → 选 GitHub → 选**原始仓库 `mgmg22/cloudflare-checkin`** → 分支 `main`；
@@ -102,7 +102,7 @@ npm run dev                       # wrangler dev 本地起服务，浏览器访�
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/mgmg22/cloudflare-checkin)
 
-> 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin`，无需手填。
+> 一键部署会先 Fork 本仓库再部署，Worker 名默认取 `wrangler.toml` 里的 `qinglong-checkin1`，无需手填。
 > 由于变量不在 `[vars]`，向导**不预生成变量表单**——部署完成后，运行 `bash scripts/setup-secrets.sh`
 > （或去控制台 Secrets 手动录入）推送全部变量（清单见上）即可。
 > KV 绑定默认启用（`CHECKIN_STATE`，Trae/MiniMax 滚动 token 缓存 + XB 线报 id 去重）；换账号时

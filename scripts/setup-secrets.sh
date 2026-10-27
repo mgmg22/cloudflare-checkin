@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # 从青龙脚本库 QinglongMy 的 .env 读取变量，逐个 wrangler secret put 推送到 Cloudflare（加密存储，
 # wrangler v4 起无 vars 命令）；Worker 内 env.X 读取方式不变。
-# 用法： bash scripts/setup-secrets.sh <QinglongMy/.env 路径> [py 续期缓存 .trae_token.json 路径]
+# 用法： bash scripts/setup-secrets.sh <QinglongMy/.env 路径> [py 续期缓存 .trae_token.json 路径] [目标 Worker 名]
+#       目标 Worker 名不传时默认用 wrangler.toml 的 name
 # 前置：npx wrangler deploy（Worker 已存在）&& npx wrangler login（已登录 Cloudflare）
 set -euo pipefail
 
@@ -9,6 +10,7 @@ SRC_ENV="${1:?用法: bash scripts/setup-secrets.sh <QinglongMy/.env 路径> [py
 # Trae 的 token / refresh_token 优先取 .trae_token.json（py 每次续期后写入最新值，
 # 见 py 的 self_heal -> save_cache）；.env 里多为过期快照，仅在缓存缺失时兜底。
 CACHE_JSON="${2:-}"
+TARGET="${3:-}"
 cd "$(dirname "$0")/.."
 
 # 从 py 的续期缓存读取最新凭据（key 为 json 字段名，如 token / refresh_token）
@@ -36,8 +38,10 @@ put() {
     echo "跳过 $name（源 .env 无值）"
     return
   fi
-  echo ">> wrangler secret put $name"
-  printf '%s' "$val" | npx wrangler secret put "$name" >/dev/null 2>&1 && echo "   OK" || echo "   失败（重试或手动到控制台录入）"
+  local args=()
+  [ -n "$TARGET" ] && args=(--name "$TARGET")
+  echo ">> wrangler secret put $name${TARGET:+ (→ $TARGET)}"
+  printf '%s' "$val" | npx wrangler secret put "$name" "${args[@]}" >/dev/null 2>&1 && echo "   OK" || echo "   失败（重试或手动到控制台录入）"
 }
 
 # ---- WorkBuddy ----
